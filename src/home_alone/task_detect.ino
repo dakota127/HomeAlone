@@ -14,7 +14,7 @@
 //---------------------------------------------------------------
 // this function runs as a separate task to detect movement
 //---------------------------------------------------------------
-void detectMovement( void * parameter )
+void task_detect ( void * parameter )
 {
      static bool detect_first_time = true ;
       int count;
@@ -22,7 +22,7 @@ void detectMovement( void * parameter )
   
 
     if (detect_first_time) {
-      DEBUGPRINT1 ("TASK detectmov - Running on core:");
+      DEBUGPRINT1 ("TASK detect - Running on core:");
       DEBUGPRINTLN1 (xPortGetCoreID());
       detect_first_time = false;
        // nothing else to do ....

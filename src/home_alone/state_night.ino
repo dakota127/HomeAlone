@@ -47,17 +47,13 @@ void do_night() {
     
 // check if morning, quiet hour ended
 
-  time(&now);
-  localtime_r (&now, &timeinfo);
-  int curr_hour = timeinfo.tm_hour;
-  int curr_dayofyear = timeinfo.tm_yday;
-  int curr_year = timeinfo.tm_year -100;   // function returns year since 
+
     
-  DEBUGPRINT2 (curr_dayofyear);  DEBUGPRINT2 (" / "); DEBUGPRINTLN2 (old_dayofyear); 
-  DEBUGPRINT2 (curr_year);  DEBUGPRINT2 (" / ");  DEBUGPRINTLN2 (old_year); 
+  DEBUGPRINT2 (curr_dayofyear);  DEBUGPRINT2 (" / "); DEBUGPRINTLN2 (day_night_old_dayofyear); 
+  DEBUGPRINT2 (curr_year);  DEBUGPRINT2 (" / ");  DEBUGPRINTLN2 (day_night_old_year); 
   DEBUGPRINT2 (curr_hour);  DEBUGPRINT2 (" / ");  DEBUGPRINTLN2 (config.QuietHoursEnd); 
 
-   if ((  old_year == curr_year) and (old_dayofyear == curr_dayofyear)) {
+   if ((  day_night_old_year == curr_year) and (day_night_old_dayofyear == curr_dayofyear)) {
         DEBUGPRINTLN2 ("No day and no year change");                        // value 2 für debug
    }
    else if (curr_hour > config.QuietHoursEnd) {

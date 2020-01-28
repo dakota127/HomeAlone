@@ -20,7 +20,7 @@
 
 //----------------------------------------------------------------
 // Loads the configuration from a file
-int loadConfig(const char *filename, Config &config) {
+int loadConfig (const char *filename, Config &config) {
 
 // Initialize SD library
   const int chipSelect = 4;

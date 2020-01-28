@@ -28,7 +28,7 @@
 #include "ThingSpeak.h"
 #include <ArduinoJson.h>
 #include <SD.h>
-#define DEBUGLEVEL 1        // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
+#define DEBUGLEVEL 0        // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
 #include <DebugUtils.h>     // Library von Adreas Spiess
 
 #define  REPORTING_TRIGGERLEVEL  40              // to be added to config File later <----- 
@@ -185,16 +185,12 @@ static volatile int curr_year;   // function returns year since
 void printLocalTime();
 int wifi_connect (char *, char * , int);
 void wifi_disconnect ();
-void task_detect( void *);
-void task_wifi( void *);
-void task_display (void *);
-void task_clock (void *);
+void detectMovement( void *);
 void do_athome();
 void do_away();
-void do_night();
 void do_leaving();
 int report_toCloud();
-int loadConfig ();
+
 
 //---- This and that -------------------------------
 int debug_flag = false;
@@ -242,10 +238,6 @@ void setup() {
   SemaOledSignal = xSemaphoreCreateMutex();
   wifi_semaphore = xSemaphoreCreateMutex();
   
-  clock_1Semaphore = xSemaphoreCreateMutex();
-  clock_2Semaphore = xSemaphoreCreateMutex();
-  clock_3Semaphore = xSemaphoreCreateMutex();
-  
   Serial.begin(115200);
   delay(2000);   //wait so we see everything
   display_Running_Sketch();
@@ -272,7 +264,7 @@ void setup() {
 // parameters to start a task:
 //  (name of task , Stack size of task , parameter of the task , priority of the task , Task handle to keep track of created task , core )
 //
-  xTaskCreatePinnedToCore (task_display, "oledtask", 2000, NULL, TASK_PRIORITY, &Task1, CORE_1);
+  xTaskCreatePinnedToCore (do_oled, "oledtask", 2000, NULL, TASK_PRIORITY, &Task1, CORE_1);
 
   vTaskDelay(200 / portTICK_PERIOD_MS);
 
@@ -288,7 +280,7 @@ void setup() {
 //  (name of task , Stack size of task , parameter of the task , priority of the task , Task handle to keep track of created task , core )
 //
   
-  xTaskCreatePinnedToCore (task_wifi, "wifitask", 6000, NULL, TASK_PRIORITY, &Task1, CORE_1);
+  xTaskCreatePinnedToCore (wifi_task, "wifitask", 6000, NULL, TASK_PRIORITY, &Task1, CORE_1);
 
   vTaskDelay(200 / portTICK_PERIOD_MS);
 
@@ -355,13 +347,13 @@ void setup() {
   DEBUGPRINTLN1 ("about to start task2");             // metronome 
 //  task can only be started after time is available...
   vTaskDelay(100 / portTICK_PERIOD_MS);
-  xTaskCreatePinnedToCore ( task_clock,"clock", 5000, NULL, TASK_PRIORITY, &Task2, CORE_1);
+  xTaskCreatePinnedToCore ( metronome,"metronome", 5000, NULL, TASK_PRIORITY, &Task2, CORE_1);
 
   vTaskDelay(200 / portTICK_PERIOD_MS);
 
    DEBUGPRINTLN1 ("about to start task3");
    vTaskDelay(100 / portTICK_PERIOD_MS);
-   xTaskCreatePinnedToCore (task_detect, "Movement", 2000, NULL, TASK_PRIORITY, &Task3, CORE_0);                 
+   xTaskCreatePinnedToCore (detectMovement, "Movement", 2000, NULL, TASK_PRIORITY, &Task3, CORE_0);                 
 
    vTaskDelay(200 / portTICK_PERIOD_MS);
 

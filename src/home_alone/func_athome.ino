@@ -18,10 +18,9 @@ int ath_count;
 
 static bool athome_first_time = true;                // first_time run through a state, bitwise, bit 0 means state 1
 
-int butto;
+bool do_report= false;
 
-static time_t last_time_report;
-static time_t last_time_push;
+
 time_t now_2;
 
 //---------------------------------------------------------------
@@ -33,8 +32,6 @@ void do_athome() {
     if (athome_first_time) {
       DEBUGPRINT1("STATE athome - Running on core:");
       DEBUGPRINTLN1(xPortGetCoreID());
-      time(&last_time_report);
-      time(&last_time_push);
       athome_first_time = false;
       value4_oled = 1;              // signal is at home
       xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
@@ -52,16 +49,32 @@ void do_athome() {
     }
  
 
- // ------- report to cloud ----------------------------------
-    time(&now_2);
-    if (( now_2 - last_time_report) > config.MinutesBetweenUploads ) {         
-          time(&last_time_report);
-          xSemaphoreTake(SemaMovement, portMAX_DELAY);
-          ath_count = movement_count;
-          xSemaphoreGive(SemaMovement);
+  // get semaphore and read the clock number 1 ------------------
+   if( xSemaphoreTake( clock_1Semaphore, ( TickType_t ) 10 ) == pdTRUE )  {     // semaphore obtained, now do the work
+       if (clock_tick_1) {
+           Serial.println ("Clock 1 ticked....");
+           clock_tick_1 = false;
+           do_report = true;
+           }
+       vTaskDelay(10 / portTICK_PERIOD_MS);
+       xSemaphoreGive( clock_1Semaphore );              // release semaphore
+
+// get movement count ----------
+       xSemaphoreTake(SemaMovement, portMAX_DELAY);
+       ath_count = movement_count;
+       xSemaphoreGive(SemaMovement);
+
+   }
+    else  {                                             // semaphore busy, do nothing....
+       Serial.println("Semaphore clock 1busy");
+    }
 
 
-       DEBUGPRINTLN1 ("trying to report to cloud");
+
+
+    if (do_report) {
+      DEBUGPRINTLN1 ("trying to report to cloud");
+       do_report = false;
  // we need to report to the cloud - this is done in the wifi task
  // first we need to se if task is free or busy - we check the tasks semaphore
  
@@ -91,6 +104,9 @@ void do_athome() {
 
         }
     
+       
+       
+  
 
  
   vTaskDelay(200 / portTICK_PERIOD_MS);
@@ -102,15 +118,13 @@ void do_athome() {
             xSemaphoreGive(SemaMovement);
           }
 // ------- report to cloud ----------------------------------
-     
-    }  // end Zeit erreicht
-
+    }
 
 
 
 // check if button I am leaving is pressed --------------
      xSemaphoreTake(SemaButton, portMAX_DELAY);
-     butto= button_awaypressed;
+     int butto = button_awaypressed;
      xSemaphoreGive(SemaButton);
 
       if (butto >0) {
@@ -134,15 +148,12 @@ void do_athome() {
     time(&now);
     localtime_r (&now, &timeinfo);
   
-    int currenthour = timeinfo.tm_hour;
-
-
-   
-    if (currenthour >= config.QuietHoursStart) {
+    int curr_hour = timeinfo.tm_hour;
+    if (curr_hour >= config.QuietHoursStart) {
         state= NIGHT;
         athome_first_time = true;   
-        old_dayofyear = timeinfo.tm_yday;
-        old_year = timeinfo.tm_year -100;   // function returns year since 1900
+        day_night_old_dayofyear = timeinfo.tm_yday;
+        day_night_old_year = timeinfo.tm_year -100;   // function returns year since 1900
         
         DEBUGPRINTLN1 ("Good night...");
     }
@@ -152,7 +163,6 @@ void do_athome() {
 
 
 }
-
 
 
 void test_push() {

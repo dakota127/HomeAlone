@@ -49,7 +49,7 @@ int greenledState = LOW;             // ledState used to set the LED
 //--------------------------------------------------------- 
 // function oled, runs as a sepatare task ------------
 //----------------------------------------------------------
-void do_oled( void * parameter )
+void task_display ( void * parameter )
 { 
       static long unsigned last_displaytime;
       static unsigned long lastEntryTime;
@@ -61,7 +61,7 @@ void do_oled( void * parameter )
  for (;;) {                         // do this forever....
   
     if (oled_first_time) {
-      DEBUGPRINT1 ("TASK do_oled - Running on core:");
+      DEBUGPRINT1 ("TASK display - Running on core:");
       DEBUGPRINTLN1 (xPortGetCoreID());
       oled_first_time = false;
 

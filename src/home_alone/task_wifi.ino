@@ -21,7 +21,7 @@ int retwifi;
 // it does its job then suspends itself 
 // if takes the wifi_semaphore semaphore while working
 //---------------------------------------------------------------
-void wifi_task( void * parameter )
+void task_wifi ( void * parameter )
 {
 
  
