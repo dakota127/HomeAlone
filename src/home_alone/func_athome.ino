@@ -73,7 +73,7 @@ void do_athome() {
 
 
     if (do_report) {
-      DEBUGPRINTLN1 ("trying to report to cloud");
+      DEBUGPRINT1 ("trying to report to cloud, count:  ");   DEBUGPRINTLN1 (ath_count);
        do_report = false;
  // we need to report to the cloud - this is done in the wifi task
  // first we need to se if task is free or busy - we check the tasks semaphore
@@ -87,7 +87,7 @@ void do_athome() {
          // set up parameter for this job
             wifi_todo = REPORT_CLOUD;
             wifi_order_struct.order = wifi_todo;
-            wifi_order_struct.mvcount  = movement_count;
+            wifi_order_struct.mvcount  = ath_count;
             vTaskResume( Task1 );
             /* We have finished accessing the shared resource.  Release the
             semaphore. 
