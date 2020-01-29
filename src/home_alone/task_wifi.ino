@@ -62,7 +62,7 @@ void task_wifi ( void * parameter )
         }
         else {
         value1_oled = 0;   
-        wifi_disconnect();                // disconnect unti further use    
+
        }
 
       break;
@@ -75,8 +75,8 @@ void task_wifi ( void * parameter )
         Serial.println("\t\t\t\t\terror-error-error - no wifi 2"); 
         }
         else {
-        int ret = report_toCloud(2)  ; 
-        wifi_disconnect();                // disconnect unti further use
+        int ret = report_toCloud(wifi_order_struct.mvcount)  ; 
+
         }
         
       break;
@@ -89,7 +89,7 @@ void task_wifi ( void * parameter )
         }
         else {
         int res = report_toPushover(wifi_order_struct.pushtext);  
-        wifi_disconnect();                // disconnect unti further use
+ 
         }
 
       break;
@@ -100,6 +100,8 @@ void task_wifi ( void * parameter )
       
     }
 
+    wifi_disconnect();                // disconnect unti further use
+    
     DEBUGPRINTLN1 ("\t\t\t\t\twifi_task give semaphore");
     xSemaphoreGive(wifi_semaphore);
     vTaskDelay(100 / portTICK_PERIOD_MS); 

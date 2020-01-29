@@ -56,6 +56,7 @@ void task_display ( void * parameter )
       static bool oled_first_time = true ;
       static bool oled_on = false;
       int count;
+      int count_day;
 
       
  for (;;) {                         // do this forever....

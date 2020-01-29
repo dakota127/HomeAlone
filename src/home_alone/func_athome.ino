@@ -15,6 +15,7 @@
 */
 
 int ath_count;
+int ath_count_day;
 
 static bool athome_first_time = true;                // first_time run through a state, bitwise, bit 0 means state 1
 
@@ -52,7 +53,7 @@ void do_athome() {
   // get semaphore and read the clock number 1 ------------------
    if( xSemaphoreTake( clock_1Semaphore, ( TickType_t ) 10 ) == pdTRUE )  {     // semaphore obtained, now do the work
        if (clock_tick_1) {
-           Serial.println ("Clock 1 ticked....");
+           DEBUGPRINTLN1  ("Clock 1 ticked....");
            clock_tick_1 = false;
            do_report = true;
            }
@@ -62,18 +63,16 @@ void do_athome() {
 // get movement count ----------
        xSemaphoreTake(SemaMovement, portMAX_DELAY);
        ath_count = movement_count;
+       ath_count_day = movement_count_perday;
        xSemaphoreGive(SemaMovement);
 
    }
     else  {                                             // semaphore busy, do nothing....
-       Serial.println("Semaphore clock 1busy");
+       DEBUGPRINTLN1 ("Semaphore clock 1busy");
     }
 
-
-
-
     if (do_report) {
-      DEBUGPRINT1 ("trying to report to cloud, count:  ");   DEBUGPRINTLN1 (ath_count);
+      DEBUGPRINT1 ("trying to report to cloud, count:  ");   DEBUGPRINT1 (ath_count); DEBUGPRINT1 (" / "); DEBUGPRINTLN1 (ath_count_day); 
        do_report = false;
  // we need to report to the cloud - this is done in the wifi task
  // first we need to se if task is free or busy - we check the tasks semaphore
@@ -99,7 +98,7 @@ void do_athome() {
             /* We could not obtain the semaphore and can therefore not access
             the shared resource safely. */
 
-            Serial.println ("wifi semaphore busy (cloud reporting)");
+            DEBUGPRINTLN1  ("wifi semaphore busy (cloud reporting)");
             vTaskDelay(200 / portTICK_PERIOD_MS);
 
         }
@@ -143,25 +142,6 @@ void do_athome() {
  
     }
 
-
-
-    time(&now);
-    localtime_r (&now, &timeinfo);
-  
-    int curr_hour = timeinfo.tm_hour;
-    if (curr_hour >= config.QuietHoursStart) {
-        state= NIGHT;
-        athome_first_time = true;   
-        day_night_old_dayofyear = timeinfo.tm_yday;
-        day_night_old_year = timeinfo.tm_year -100;   // function returns year since 1900
-        
-        DEBUGPRINTLN1 ("Good night...");
-    }
-  //  Serial.print ("Stunde: "); Serial.println (timeinfo.tm_hour);
-    vTaskDelay(500 / portTICK_PERIOD_MS);
-//  DEBUGPRINTLN1 ("do_athome()");
-
-
 }
 
 
@@ -183,7 +163,7 @@ void test_push() {
             wifi_order_struct.order = wifi_todo;
             wifi_order_struct.pushtext = "Test Message";
               
-            Serial.println (wifi_order_struct.pushtext);
+            DEBUGPRINTLN1 (wifi_order_struct.pushtext);
             vTaskResume( Task1 );
             /* We have finished accessing the shared resource.  Release the
             semaphore. */
@@ -194,7 +174,7 @@ void test_push() {
             /* We could not obtain the semaphore and can therefore not access
             the shared resource safely. */
 
-            Serial.println ("wifi semaphore busy (push test msg)");
+            DEBUGPRINTLN1  ("wifi semaphore busy (push test msg)");
             vTaskDelay(200 / portTICK_PERIOD_MS);
 
         }

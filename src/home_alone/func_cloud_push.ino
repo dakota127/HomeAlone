@@ -23,16 +23,6 @@ int report_toCloud(int count) {
    DEBUGPRINT1 ("Cloud Update count: ");
    DEBUGPRINTLN1 (count);
 
-/*
-   int ret = setup_wifi (WIFI_DETAILS);
-   if (ret>5) {
-      Serial.println ("error-error-error - no wifi 2"); 
-      credential_to_use = 0;
-      DEBUGPRINTLN1 ("could not report to cloud");
-      return (9);
-    }
- 
-*/
  // Write to ThingSpeak. There are up to 8 fields in a channel, allowing you to store up to 8 different
   // pieces of information in a channel.  Here, we write to field 1.
   //  ThingSpeak.begin(client);  // Initialize ThingSpeak

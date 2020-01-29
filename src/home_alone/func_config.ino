@@ -144,7 +144,7 @@ config.ReportingThreshold =   doc["ReportingThreshold"]; // 30
 
 
 // uncomment for producton ------------------------------------
-config.QuietHoursStart = 21;        // <------------------------
+config.QuietHoursStart = 20;        // <------------------------
 config.QuietHoursEnd = 7;        // <------------------------
 // uncomment for producton ------------------------------------
   // Close the file (Curiously, File's destructor doesn't close the file)

@@ -17,7 +17,9 @@
 void task_detect ( void * parameter )
 {
      static bool detect_first_time = true ;
-      int count;
+     int count;
+     int count_day;
+
  for (;;) {
   
 
@@ -52,13 +54,14 @@ void task_detect ( void * parameter )
 
         xSemaphoreTake(SemaMovement, portMAX_DELAY);
         ++movement_count;
+        ++ movement_count_perday;
         if (movement_count > config.MaxActivityCount) movement_count = config.MaxActivityCount;
-        count = movement_count;
-        movement_count_perday = movement_count_perday + count;
-        xSemaphoreGive(SemaMovement);
+ 
+         count = movement_count;
+         count_day = movement_count_perday;
+         xSemaphoreGive(SemaMovement);
 
-       DEBUGPRINT1 ("count now: ");
-       DEBUGPRINTLN1 (count);
+        DEBUGPRINT1 ("count now: ");  DEBUGPRINT1 (count); DEBUGPRINT1 (" / ");  DEBUGPRINTLN1 (count_day);
 
       }
     }

@@ -45,8 +45,11 @@ void do_night() {
 
   vTaskDelay(3000 / portTICK_PERIOD_MS);
     
-// check if morning, quiet hour ended
 
+
+//-------------------------------------------------
+// check if morning has broken, quiet hour ended
+//------------------------------------------------
 
     
   DEBUGPRINT2 (curr_dayofyear);  DEBUGPRINT2 (" / "); DEBUGPRINTLN2 (day_night_old_dayofyear); 
