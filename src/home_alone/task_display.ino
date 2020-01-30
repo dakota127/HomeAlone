@@ -92,7 +92,7 @@ void task_display ( void * parameter )
       DEBUGPRINTLN2("oled_display ");
       
     // assemble string to be displayed   
-      sprintf( oled_buf , "%d  %d  %d  %c  %d", value1_oled, value2_oled, value3_oled, state_display[value4_oled], movement_count);
+      sprintf( oled_buf , "%d  %d  %d  %c %d", value1_oled, value2_oled, value3_oled, state_display[value4_oled], movement_count);
 
    // Serial.println (oled_buf);
       display.clear();

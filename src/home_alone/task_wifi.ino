@@ -242,7 +242,7 @@ int get_time() {
  configTime(0, 0, config.NTPPool);
   // See https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv for Timezone codes for your region
   setenv("TZ", config.Timezone_Info, 1);
-
+  DEBUGPRINTLN1 (config.Timezone_Info);
 
      if (getNTPtime(10)) {  // wait up to 10sec to sync
         } 

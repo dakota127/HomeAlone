@@ -4,13 +4,62 @@
 
 * This version based on a state machine
 * 
-
-
+* THIS Function RUNS in TASK state_machine !
+* AWAY is one of the states of the machine
+* we are in this state if nobody is home
+* 
+* We report this fact to the cloud every n minutes with field1 = -5
+* upon detecting a motion the machine switches to the ATHOME state (no burglars are reported)
+* if no movement the machine remains in this state
+* 
+* JSON:
+* arduinojson.org/v6/assistant 
+* to compute the capacity.
 */
 // Pushover
 #include "Pushover.h"
 String Token  = "ajiu7a1odbcx9xp6op2wenoctneeik";
 String Userkey   = "uku7m4n8ru7rwf1wkmxvhbqniq4bxh";
+
+
+//----------------------------------------------------------------
+
+
+void test_push(String message) {
+  
+// we need to report to the cloud - this is done in the wifi task
+ // first we need to se if task is free or busy - we check the tasks semaphore
+
+  
+  
+        /* See if we can obtain the semaphore.  If the semaphore is not
+        available wait 10 ticks to see if it becomes free. */
+        if( xSemaphoreTake( wifi_semaphore, ( TickType_t ) 100 ) == pdTRUE )
+        {
+            /* We were able to obtain the semaphore and can now access the
+            shared resource. */
+         // set up parameter for this job
+            wifi_todo = PUSH_MESG;
+            wifi_order_struct.order = wifi_todo;
+            wifi_order_struct.pushtext = message;
+              
+            DEBUGPRINTLN1 (wifi_order_struct.pushtext);
+            vTaskResume( Task1 );
+            /* We have finished accessing the shared resource.  Release the
+            semaphore. */
+    //        xSemaphoreGive( wifi_semaphore );
+        }
+        else
+        {
+            /* We could not obtain the semaphore and can therefore not access
+            the shared resource safely. */
+
+            DEBUGPRINTLN1  ("wifi semaphore busy (push test msg)");
+            vTaskDelay(200 / portTICK_PERIOD_MS);
+
+        }
+}      
+
 
 
 //--------------------------------------------------
@@ -67,5 +116,8 @@ int report_toPushover (String messageText) {
 }
 
 
-//  end of code -------------------------------
- 
+// end of cde -----------------------------------
+
+
+
+// end of code ------------------------------

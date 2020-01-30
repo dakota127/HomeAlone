@@ -86,6 +86,15 @@ struct wifi_struct {               /// wifi struct
 
 // static volatile wifi_struct  wifi_order_struct;
 
+//---- State Machine related definitions and variables ----
+enum {
+    NIGHT,                                      // finite state machins states
+    ATHOME,
+    LEAVING,
+    AWAY
+    };
+
+uint8_t state = ATHOME;              // state variable is global
 
 //---- communication between tasks ----------------
 static volatile unsigned long movement_count = 0;
@@ -103,14 +112,7 @@ static volatile int value5_oled = 0 ;             // movement count
 int oledsignal = 1;
 
 
-//---- State Machine related definitions and variables ----
-enum {
-    NIGHT,                                      // finite state machins states
-    ATHOME,
-    LEAVING,
-    AWAY
-    };
-uint8_t state = ATHOME;              // state variable
+
 
 //---- Network related definitions and variables ----
 WiFiClient  client;
@@ -186,6 +188,7 @@ void printLocalTime();
 int wifi_connect (char *, char * , int);
 void wifi_disconnect ();
 void task_detect( void *);
+void state_machine( void *);
 void task_wifi( void *);
 void task_display (void *);
 void task_clock (void *);
@@ -293,8 +296,7 @@ void setup() {
   vTaskDelay(200 / portTICK_PERIOD_MS);
 
 
-  state = ATHOME;                   // initial state of state machine
-
+ 
  // we need to test wifi - this is done in the wifi task
  // first we need to se if task is free or busy - we check the tasks semaphore
 
@@ -377,50 +379,8 @@ void setup() {
   
 
   DEBUGPRINTLN1 ("Setup done...");
-}
 
-//-----------------------------------------------------
-// implementation of the state machine (Runs in separate task !)
-//-----------------------------------------------------
-void state_machine( void * parameter )
-{
- static bool main_firsttime = true ;
-  for (;;) {
-
-    if (main_firsttime) {
-      DEBUGPRINT1 ("TASK state_machine - Running on core:");
-      DEBUGPRINTLN1 (xPortGetCoreID());
-      main_firsttime = false;
-    }
- 
- // switch according to state variable
-  switch (state) {
-
-    case ATHOME:
-      do_athome();
-      break;
-
-    case LEAVING:
-      do_leaving();
-      break;
-
-    case AWAY:
-      do_away();
-      break;
-  
-    case NIGHT:
-      do_night();
-      break;
-
-    default:
-      DEBUGPRINTLN0 ("case main zu default, error!");
-      vTaskDelay(200 / portTICK_PERIOD_MS);
-      break;
-   }              // end case stmt
-
-    vTaskDelay(200 / portTICK_PERIOD_MS);
-
-  }
+  vTaskDelete(NULL);                // delete this initial task
 }
 
 
