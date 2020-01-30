@@ -28,7 +28,7 @@
 #include "ThingSpeak.h"
 #include <ArduinoJson.h>
 #include <SD.h>
-#define DEBUGLEVEL 1        // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
+#define DEBUGLEVEL 0        // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
 #include <DebugUtils.h>     // Library von Adreas Spiess
 
 #define  REPORTING_TRIGGERLEVEL  40              // to be added to config File later <----- 

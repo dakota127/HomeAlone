@@ -143,10 +143,6 @@ config.MorningReportingHour = doc["MorningReportingHour"]; // 30
 config.ReportingThreshold =   doc["ReportingThreshold"]; // 30
 
 
-// uncomment for producton ------------------------------------
-config.QuietHoursStart = 20;        // <------------------------
-config.QuietHoursEnd = 7;        // <------------------------
-// uncomment for producton ------------------------------------
   // Close the file (Curiously, File's destructor doesn't close the file)
   file.close();
 
@@ -157,6 +153,8 @@ config.QuietHoursEnd = 7;        // <------------------------
        config.MinutesBetweenEmails =  MAIL_INTERVALL_TEST;
        config.MinutesBetweenPushover = PUSHOVER_INTERVALL_TEST;
        config.TimeOutPeriodSec = STATE_LEAVE_TEST;          // in seconds for test debug
+       config.QuietHoursStart = 20;        // <------------------------
+       config.QuietHoursEnd = 7;        // <------------------------
        printFile(filename);
        printConfig();
     }
