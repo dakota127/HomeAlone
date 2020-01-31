@@ -28,7 +28,7 @@
 #include "ThingSpeak.h"
 #include <ArduinoJson.h>
 #include <SD.h>
-#define DEBUGLEVEL 0        // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
+#define DEBUGLEVEL 1        // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
 #include <DebugUtils.h>     // Library von Adreas Spiess
 
 #define  REPORTING_TRIGGERLEVEL  40              // to be added to config File later <----- 
@@ -200,7 +200,10 @@ int report_toCloud();
 int loadConfig ();
 
 //---- This and that -------------------------------
-int debug_flag = false;
+
+int debug_flag = false;             // for output to serial console, is set if DEBUGLEVEL is > 0
+int debug_flag_push = true;        // for test push messages  set manually here !!    
+    
 int pirState = LOW; // we start, assuming no motion detected
 int val = 0; // variable for reading the pin status
 int ret = 0;
@@ -262,6 +265,7 @@ void setup() {
 
   digitalWrite(redledPin, LOW); // turn LED OFF
 
+// timestuff init --------------------
   old_dayofyear  = 0;
   old_year = 0;
   day_night_old_dayofyear = 0;

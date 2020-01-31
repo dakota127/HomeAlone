@@ -24,6 +24,7 @@ int ath_count;
 int ath_count_day;
 bool do_report= false;
 
+
 int mvcount;
 
 time_t now_4;
@@ -54,7 +55,14 @@ void state_machine( void * parameter )
       state = ATHOME;                   // initial state of state machine
 
     }
- 
+
+    time(&now);
+    localtime_r (&now, &timeinfo);
+  
+    curr_hour = timeinfo.tm_hour;
+    curr_dayofyear = timeinfo.tm_yday;
+    curr_year = timeinfo.tm_year -100;   // function returns year since 1900
+    
  // switch according to state variable
   switch (state) {
 
@@ -212,10 +220,7 @@ void do_athome() {
 
 // check if quitehours reached -------------------------
 // change state to night if this happened---------------
-    time(&now);
-    localtime_r (&now, &timeinfo);
   
-    int curr_hour = timeinfo.tm_hour;
    
     if (curr_hour >= config.QuietHoursStart) {
         state= NIGHT;
@@ -225,7 +230,7 @@ void do_athome() {
         
         DEBUGPRINTLN1 ("Good night...");
         
-        if (debug_flag)     test_push("Message: begin Quitehours");     // do this if modus is test
+        if (debug_flag_push)     test_push("Message: begin Quitehours");     // do this if modus is test
     }
   //  Serial.print ("Stunde: "); Serial.println (timeinfo.tm_hour);
     vTaskDelay(500 / portTICK_PERIOD_MS);
@@ -381,7 +386,7 @@ void do_night() {
       state= AWAY;                      // we change to state away and wait there for first movement
       night_first_time = true;   
       DEBUGPRINTLN1 ("Good morning...");
-      if (debug_flag)     test_push("Message: Morning has broken");     // do this if modus is test
+      if (debug_flag_push)     test_push("Message: Morning has broken");     // do this if modus is test
     }
  
 

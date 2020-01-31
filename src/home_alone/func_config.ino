@@ -155,6 +155,8 @@ config.ReportingThreshold =   doc["ReportingThreshold"]; // 30
        config.TimeOutPeriodSec = STATE_LEAVE_TEST;          // in seconds for test debug
        config.QuietHoursStart = 20;        // <------------------------
        config.QuietHoursEnd = 7;        // <------------------------
+
+       config.MorningReportingHour = 11;      // <-------------------------------------
        printFile(filename);
        printConfig();
     }
