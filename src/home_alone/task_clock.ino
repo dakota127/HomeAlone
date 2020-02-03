@@ -1,18 +1,12 @@
-/*
+/* -------------------------------------------------------------------
 * Home Alone Application
 * Based on a project presentd by Ralph Bacon
+* This version used an ESP32 doing multitasking.
+* by Peter B, from Switzerland
+* Project website http://projects.descan.com/projekt7.html
 
-* This version based on a state machine
-* 
-* THIS RUNS as a separat task
-* does nothing for now 
-* 
-* 
 */
 
-
-
-// constants won't change:
 
 
 static bool done_morningreporting = false;           // have we already done it at the specified hour ?
@@ -27,7 +21,7 @@ static time_t last_time_clock_1;
 char buf[20];
 //
 //--------------------------------------------------------- 
-// function metronome, runs as a sepatare task ------------
+// function task_clock(), runs as a sepatare task ------------
 //----------------------------------------------------------
 void task_clock ( void * parameter )
 {
@@ -91,6 +85,11 @@ void task_clock ( void * parameter )
 //---------------------------------------------------------------------------------------
 // -----  handle clock_2 (used for morning reporting (pushing a message))-----------------
 //---------------------------------------------------------------------------------------
+
+   if (config.MorningReportingHour > 0) {
+    
+ 
+    
    if ((  old_year <= curr_year) or (old_dayofyear != curr_dayofyear)) {
       if  ((curr_hour >= config.MorningReportingHour) and (done_morningreporting == false)) {
 
@@ -98,7 +97,7 @@ void task_clock ( void * parameter )
         sprintf( buf , " Good Morning, Mov: %d /  %d", count, count_day);
         
       // push morning message ------------
-          push_msg (buf);
+          push_msg (buf, -1);
           done_morningreporting = true;
           old_dayofyear  = timeinfo.tm_yday;
           old_year = timeinfo.tm_year -100;   
@@ -108,11 +107,18 @@ void task_clock ( void * parameter )
         DEBUGPRINT2 ("\t\t");
         DEBUGPRINTLN2 ("No day and no year change 2");                        // value 2 für debug
    }
+
+   }
+    
 // end handling Morning reporting
 
 //---------------------------------------------------------------------------------------
 // -----  handle clock_3 (used for evening  reporting (pushing a message)-----------------
 //---------------------------------------------------------------------------------------
+
+  if (config.EveningReportingHour > 0) {
+    
+ 
    if ((  old_year <= curr_year) or (old_dayofyear != curr_dayofyear)) {
       if  ((curr_hour >= config.EveningReportingHour) and (done_eveningreporting == false)) {
 
@@ -120,7 +126,7 @@ void task_clock ( void * parameter )
          sprintf( buf , " Good Evening, Mov: %d /  %d", count, count_day);
         
       // push Evening message ------------
-          push_msg (buf);
+          push_msg (buf , -1);
           done_eveningreporting = true;
           old_dayofyear  = timeinfo.tm_yday;
           old_year = timeinfo.tm_year -100;   
@@ -130,6 +136,8 @@ void task_clock ( void * parameter )
    else {
         DEBUGPRINTLN2 ("\t\tNo day and no year change 2");                        // value 2 für debug
    }
+
+  }  
 // end handling Morning reporting ----------------------------
 
 
@@ -144,7 +152,7 @@ void task_clock ( void * parameter )
 
 
 //--------------------------------------------------------------
-int push_msg (String text){
+int push_msg (String text, int prio){
   
 
 // ------- report to pushover ----------------------------------
@@ -165,7 +173,7 @@ int push_msg (String text){
         wifi_todo = PUSH_MESG;
         wifi_order_struct.order = wifi_todo;
         wifi_order_struct.pushtext = text;
-            
+        wifi_order_struct.priority = prio;    
        //      strlcpy(wifi_order_struct.pushtext, text,   sizeof(text));                    // <- destination
      
   //      Serial.println (text);

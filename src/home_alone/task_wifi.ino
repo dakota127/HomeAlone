@@ -1,26 +1,21 @@
-/*
+/* -------------------------------------------------------------------
 * Home Alone Application
 * Based on a project presentd by Ralph Bacon
-
-* This version based on a state machine
+* This version used an ESP32 doing multitasking.
+* by Peter B, from Switzerland
+* Project website http://projects.descan.com/projekt7.html
 * 
-* THIS RUNS as a separat task
-* does nothing for now 
-* 
-* 
-*/
-
-
-// constants won't change:
-
-int order;
-int retwifi;
-
 //---------------------------------------------------------------
 // this function runs as a separate task - it handles wifi if so requested
 // it does its job then suspends itself 
 // if takes the wifi_semaphore semaphore while working
 //---------------------------------------------------------------
+
+*/
+int order;
+int retwifi;
+
+
 void task_wifi ( void * parameter )
 {
 
@@ -88,7 +83,7 @@ void task_wifi ( void * parameter )
         Serial.println("\t\t\t\t\terror-error-error - no wifi 3"); 
         }
         else {
-        int res = report_toPushover(wifi_order_struct.pushtext);  
+        int res = report_toPushover (wifi_order_struct.pushtext, wifi_order_struct.priority );  
  
         }
 

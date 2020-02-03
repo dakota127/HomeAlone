@@ -1,13 +1,9 @@
-/*
+/* -------------------------------------------------------------------
 * Home Alone Application
 * Based on a project presentd by Ralph Bacon
-
-* This version based on a state machine
-* 
-* THIS RUNS as a separat task
-* the only functio ist to detect movement and increment the movement counter
-* that is all we do here !
-* 
+* This version used an ESP32 doing multitasking.
+* by Peter B, from Switzerland
+* Project website http://projects.descan.com/projekt7.html
 * 
 */
 
@@ -27,6 +23,7 @@ void task_detect ( void * parameter )
       DEBUGPRINT1 ("TASK detect - Running on core:");
       DEBUGPRINTLN1 (xPortGetCoreID());
       detect_first_time = false;
+      timelastMovement = now;                            // Initiate time last movement
        // nothing else to do ....
     }
  
@@ -59,9 +56,11 @@ void task_detect ( void * parameter )
  
          count = movement_count;
          count_day = movement_count_perday;
+         timelastMovement = now;
+         
          xSemaphoreGive(SemaMovement);
 
-        DEBUGPRINT1 ("count now: ");  DEBUGPRINT1 (count); DEBUGPRINT1 (" / ");  DEBUGPRINTLN1 (count_day);
+        DEBUGPRINT1 ("count now: ");  DEBUGPRINT1 (count); DEBUGPRINT1 (" / ");  DEBUGPRINT1 (count_day); DEBUGPRINT1 (" - ");  DEBUGPRINTLN1 (timelastMovement);
 
       }
     }

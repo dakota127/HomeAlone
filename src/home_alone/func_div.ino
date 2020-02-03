@@ -1,17 +1,11 @@
-/*
+/* -------------------------------------------------------------------
 * Home Alone Application
 * Based on a project presentd by Ralph Bacon
+* This version used an ESP32 doing multitasking.
+* by Peter B, from Switzerland
+* Project website http://projects.descan.com/projekt7.html
+* 
 
-* This version based on a state machine
-* 
-* THIS Function RUNS in TASK state_machine !
-* AWAY is one of the states of the machine
-* we are in this state if nobody is home
-* 
-* We report this fact to the cloud every n minutes with field1 = -5
-* upon detecting a motion the machine switches to the ATHOME state (no burglars are reported)
-* if no movement the machine remains in this state
-* 
 * JSON:
 * arduinojson.org/v6/assistant 
 * to compute the capacity.
@@ -25,7 +19,7 @@ String Userkey   = "uku7m4n8ru7rwf1wkmxvhbqniq4bxh";
 //----------------------------------------------------------------
 
 
-void test_push(String message) {
+void test_push(String message, int prio) {
   
 // we need to report to the cloud - this is done in the wifi task
  // first we need to se if task is free or busy - we check the tasks semaphore
@@ -42,7 +36,7 @@ void test_push(String message) {
             wifi_todo = PUSH_MESG;
             wifi_order_struct.order = wifi_todo;
             wifi_order_struct.pushtext = message;
-              
+            wifi_order_struct.priority = prio;             // 1 is HIGH  
             DEBUGPRINTLN1 (wifi_order_struct.pushtext);
             vTaskResume( Task1 );
             /* We have finished accessing the shared resource.  Release the
@@ -98,17 +92,20 @@ int report_toCloud(int count) {
 // Pushover  stuff 
 //----------------------------------------------------
 
-int report_toPushover (String messageText) {
+int report_toPushover (String messageText, int prio) {
 
-   DEBUGPRINT1 ("Send Pushover Message: ");
-   DEBUGPRINTLN1 (messageText);
+   DEBUGPRINT1 ("report_toPushover: "); DEBUGPRINT1 (messageText);  DEBUGPRINT1 ("  prio: "); DEBUGPRINTLN1 (prio);
 
   
   Pushover po = Pushover(Token,Userkey);
-  po.setDevice("Device1");
-  po.setMessage(messageText);
-  po.setSound("bike");
+  po.setDevice (config.PushoverDevice1);
+  po.setDevice (config.PushoverDevice2);
+  po.setMessage (messageText);
+  po.setSound ("bike");
+  po.setTitle ("Home Alone");
+  po.setPriority (prio);
   ret = po.send();
+
   DEBUGPRINT1 ("returcode Pushover: "); 
   DEBUGPRINTLN1 (ret); //should return 1 on success
   

@@ -1,8 +1,9 @@
-/*
+/* -------------------------------------------------------------------
 * Home Alone Application
 * Based on a project presentd by Ralph Bacon
-
-* This version based on a state machine
+* This version used an ESP32 doing multitasking.
+* by Peter B, from Switzerland
+* Project website http://projects.descan.com/projekt7.html
 * 
 * THIS Function RUNS in TASK state_machine !
 * AWAY is one of the states of the machine
@@ -124,24 +125,27 @@ config.MinutesBetweenUploads = config.MinutesBetweenUploads * 60;
           doc["Email2"] | "example.ch",  // <- source
           sizeof(config.Email_2));         // <- destination's capacity
 
-config.emailTriggerLevel = doc["emailTriggerLevel"]; // 5
+  strlcpy(config.PushoverDevice1,                  // <- destination
+          doc["PushoverDevice1"] | "example.ch",  // <- source
+          sizeof(config.PushoverDevice1));         // <- destination's capacity
+  
+  strlcpy(config.PushoverDevice2,                  // <- destination
+          doc["PushoverDevice2"] | "example.ch",  // <- source
+          sizeof(config.PushoverDevice2));         // <- destination's capacity
 
 
-config.MinutesBetweenEmails = doc["MinutesBetweenEmails"]; // 89
-config.MinutesBetweenEmails = config.MinutesBetweenEmails * 60;
-config.TimeOutPeriodSec = doc["TimeOutPeriodSec"]; // 30
+
+config.TimeOutLeavingSec = doc["TimeOutLeavingSec"]; // 30
 config.MaxActivityCount = doc["MaxActivityCount"]; // 25
 config.BeepOnMovement = doc["BeepOnMovement"]; // 1
 config.QuietHoursStart = doc["QuietHoursStart"]; // 23
 config.QuietHoursEnd = doc["QuietHoursEnd"]; // 8
 config.ScreenTimeOutSeconds = doc["ScreenTimeOutSeconds"]; // 30
-config.MinutesBetweenPushover = doc["MinutesBetweenPushover"]; // 30
-config.MinutesBetweenPushover = config.MinutesBetweenPushover * 60;
 
 config.EveningReportingHour = doc["EveningReportingHour"]; // 30
 config.MorningReportingHour = doc["MorningReportingHour"]; // 30
 config.ReportingThreshold =   doc["ReportingThreshold"]; // 30
-
+config.HoursbetweenNoMovementRep =   doc["HoursbetweenNoMovementRep"]; // 30
 
   // Close the file (Curiously, File's destructor doesn't close the file)
   file.close();
@@ -150,16 +154,16 @@ config.ReportingThreshold =   doc["ReportingThreshold"]; // 30
   
    if (debug_flag) {
        config.MinutesBetweenUploads = UPLOAD_INTERVALL_TEST;   // set for debug and test
-       config.MinutesBetweenEmails =  MAIL_INTERVALL_TEST;
-       config.MinutesBetweenPushover = PUSHOVER_INTERVALL_TEST;
-       config.TimeOutPeriodSec = STATE_LEAVE_TEST;          // in seconds for test debug
-       config.QuietHoursStart = 20;        // <------------------------
+       config.TimeOutLeavingSec = STATE_LEAVE_TEST;          // in seconds for test debug
+       config.QuietHoursStart = 21;        // <------------------------
        config.QuietHoursEnd = 7;        // <------------------------
-
+       config.HoursbetweenNoMovementRep = 3;
        config.MorningReportingHour = 11;      // <-------------------------------------
+       config.HoursbetweenNoMovementRep = HOURSBETWEENNOMOV;
        printFile(filename);
-       printConfig();
+      
     }
+     printConfig();           // do this every time
 }
 //--------------------------------------------------------------------
 
@@ -192,33 +196,36 @@ void printConfig() {
 
 
  Serial.println ("Values: ");
-  Serial.println(config.ThingSpeakChannelNo);
-  Serial.println(config.ThingSpeakWriteAPIKey);
-  Serial.println(config.PersonName);
-  Serial.println(config.MinutesBetweenUploads);
-  Serial.println(config.PersonName);
-  Serial.println(config.wlanssid_1);
-  Serial.println(config.wlanpw_1);
-  Serial.println(config.wlanssid_2);
-  Serial.println(config.wlanpw_2);
-  Serial.println(config.Email_1);
-   Serial.println(config.Email_2);
-  Serial.println(config.emailTriggerLevel);
- Serial.println(config.NTPPool);
- Serial.println(config.Timezone_Info);
- Serial.println(config.MinutesBetweenEmails); 
- Serial.println(config.TimeOutPeriodSec); 
- Serial.println(config.MaxActivityCount);
- Serial.println(config.BeepOnMovement); 
- Serial.println(config.QuietHoursStart); 
- Serial.println(config.QuietHoursEnd); 
- Serial.println(config.ScreenTimeOutSeconds); 
-  Serial.println(config.PushoverUserkey); 
+  Serial.println (config.ThingSpeakChannelNo);
+  Serial.println (config.ThingSpeakWriteAPIKey);
+  Serial.println (config.PersonName);
+  Serial.println (config.MinutesBetweenUploads);
+  Serial.println (config.PersonName);
+  Serial.println (config.wlanssid_1);
+  Serial.println (config.wlanpw_1);
+  Serial.println (config.wlanssid_2);
+  Serial.println (config.wlanpw_2);
+  Serial.println (config.Email_1);
+  Serial.println (config.Email_2);
+ Serial.println (config.NTPPool);
+ Serial.println (config.Timezone_Info);
+ Serial.println (config.TimeOutLeavingSec); 
+ Serial.println (config.MaxActivityCount);
+ Serial.println (config.BeepOnMovement); 
+ Serial.println (config.QuietHoursStart); 
+ Serial.println (config.QuietHoursEnd); 
+ Serial.println (config.ScreenTimeOutSeconds); 
+ Serial.println (config.PushoverUserkey); 
   Serial.println(config.PushoverToken); 
-  Serial.println(config.MinutesBetweenPushover); 
-  Serial.println(config.EveningReportingHour);
-  Serial.println(config.MorningReportingHour);
-  Serial.println(config.ReportingThreshold);
+
+  Serial.println (config.PushoverDevice1);
+  Serial.println (config.PushoverDevice2);
+  Serial.println (config.HoursbetweenNoMovementRep);
+  Serial.println (config.EveningReportingHour);
+  Serial.println (config.MorningReportingHour);
+  Serial.println (config.ReportingThreshold);
+
+  
   
   for (int i=0; i < 4; i++) {
   Serial.println(credentials[i]);

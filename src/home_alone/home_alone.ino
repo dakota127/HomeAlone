@@ -5,7 +5,7 @@
 * https://youtu.be/5IxOUxZFfnk
 * https://www.youtube.com/redirect?redir_token=8C-a1g2b7KcNYW5kGnk-NXcvkRV8MTU3OTExMDA4NEAxNTc5MDIzNjg0&event=video_description&v=5IxOUxZFfnk&q=https%3A%2F%2Fgithub.com%2FRalphBacon%2FESP8266-Home-Alone-Vulnerable-Person-Monitor
 * 
-* I tried to understand and unclutter his code but that proved to be futile. So I started from scratch.
+* I tried to understand and unclutter his code but that proved to be futile. It is well documented but just a long list of statements. So I started from scratch.
 * 
 * My Project will run on an ESP32 so therefore use is made of multitasking.
 * 
@@ -28,10 +28,15 @@
 #include "ThingSpeak.h"
 #include <ArduinoJson.h>
 #include <SD.h>
-#define DEBUGLEVEL 1        // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
+
+
+// degugging stuff ------------------------------
+#define DEBUGLEVEL 0        // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
 #include <DebugUtils.h>     // Library von Adreas Spiess
 
+#define DEBUGPUSH true        // für Debug push messages, set to 1 for messages of important events
 #define  REPORTING_TRIGGERLEVEL  40              // to be added to config File later <----- 
+
 
 //--- helper macros ---------- number of items in an array
 #define NUMITEMS(arg) ((unsigned int) (sizeof (arg) / sizeof (arg [0])))
@@ -81,6 +86,7 @@ int wifi_todo;
 struct wifi_struct {               /// wifi struct
   int order;
   int mvcount;
+  int priority;
   String pushtext;
 } wifi_order_struct;
 
@@ -101,6 +107,7 @@ static volatile unsigned long movement_count = 0;
 static volatile unsigned long movement_count_perday = 0;
 static volatile unsigned long button_awaypressed = 0;
 static volatile unsigned long button_oledpressed = 0;
+static volatile time_t timelastMovement ;
 
 //---- display related definitions and variables ----
 // 3 variable for Oled display
@@ -136,9 +143,7 @@ struct Config {               /// config struct
   char NTPPool[20];
   char Email_1[20];
   char Email_2[20];
-  int emailTriggerLevel;
-  int MinutesBetweenEmails;
-  int TimeOutPeriodSec;
+  int TimeOutLeavingSec;
   int MaxActivityCount;
   int BeepOnMovement;
   int QuietHoursStart;
@@ -146,7 +151,9 @@ struct Config {               /// config struct
   int ScreenTimeOutSeconds;
   char PushoverUserkey[30];
   char PushoverToken[30];
-  int MinutesBetweenPushover;
+  char PushoverDevice1[15];
+  char PushoverDevice2[15];
+  int HoursbetweenNoMovementRep;
   int EveningReportingHour;
   int MorningReportingHour;
   int ReportingThreshold;
@@ -156,10 +163,10 @@ char *credentials[] = { "", "", "", "" };
 const char *filename = "/config.json";  // <- SD library uses 8.3 filenames
 Config config;                         // <- global configuration object
 
-#define MAIL_INTERVALL_TEST  900       // in seconds for test debug
 #define STATE_LEAVE_TEST      120       // in seconds for test debug
 #define UPLOAD_INTERVALL_TEST  300     // in seconds for test debug
 #define PUSHOVER_INTERVALL_TEST  900     // in seconds for test debug
+#define HOURSBETWEENNOMOV   1           // 1 hour
 
 //---- Time related definitions and variables ----
 tm timeinfo;
@@ -202,7 +209,7 @@ int loadConfig ();
 //---- This and that -------------------------------
 
 int debug_flag = false;             // for output to serial console, is set if DEBUGLEVEL is > 0
-int debug_flag_push = true;        // for test push messages  set manually here !!    
+int debug_flag_push = DEBUGPUSH;        // for test push messages  set manually here !!    
     
 int pirState = LOW; // we start, assuming no motion detected
 int val = 0; // variable for reading the pin status
@@ -358,7 +365,9 @@ void setup() {
    
 // create other tasks ------------
 
-  DEBUGPRINTLN1 ("about to start task2");             // metronome 
+
+
+  DEBUGPRINTLN1 ("about to start task2");             // clock 
 //  task can only be started after time is available...
   vTaskDelay(100 / portTICK_PERIOD_MS);
   xTaskCreatePinnedToCore ( task_clock,"clock", 5000, NULL, TASK_PRIORITY, &Task2, CORE_1);

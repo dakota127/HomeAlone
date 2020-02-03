@@ -1,6 +1,9 @@
-/*
+/* -------------------------------------------------------------------
 * Home Alone Application
 * Based on a project presentd by Ralph Bacon
+* This version used an ESP32 doing multitasking.
+* by Peter B, from Switzerland
+* Project website http://projects.descan.com/projekt7.html
 
 ---------------------------------------------------------------------------------------------------------------
 Attention:
@@ -13,9 +16,11 @@ Attention:
 ------------------------------------------------------------------------------------------------------------
 * 
 * THIS Function RUNS as a separat task
-* the only functio ist to detect movement and increment the movement counter
+* It hanldes the oled display
 * that is all we do here !
 * 
+* -----------------------------------------------------
+* keep this:
 *   display.setFont(ArialMT_Plain_24);
     display.drawString(0, 0, "Hello world");
     display.drawString(10,34, "whats up");

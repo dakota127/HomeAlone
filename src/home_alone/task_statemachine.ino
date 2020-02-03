@@ -1,16 +1,14 @@
-/*
+/* -------------------------------------------------------------------
 * Home Alone Application
 * Based on a project presentd by Ralph Bacon
-
-/---------
+* This version used an ESP32 doing multitasking.
+* by Peter B, from Switzerland
+* Project website http://projects.descan.com/projekt7.html
 * 
 * THIS Function RUNS as a separat task
-* the only functio ist to detect movement and increment the movement counter
-* that is all we do here !
-* 
-*   display.setFont(ArialMT_Plain_24);
-    display.drawString(0, 0, "Hello world");
-    display.drawString(10,34, "whats up");
+* It implements the state machine
+*
+* ------------------------------------------------------------------- 
 */
 
 
@@ -36,7 +34,7 @@ time_t now_3;
 
 
 
-
+int timelastmv;
 
 //-----------------------------------------------------------
 //-----------------------------------------------------------
@@ -56,12 +54,34 @@ void state_machine( void * parameter )
 
     }
 
+// stuff we do irrelevant of state --------
     time(&now);
     localtime_r (&now, &timeinfo);
   
     curr_hour = timeinfo.tm_hour;
     curr_dayofyear = timeinfo.tm_yday;
     curr_year = timeinfo.tm_year -100;   // function returns year since 1900
+
+
+    xSemaphoreTake(SemaMovement, portMAX_DELAY);
+        timelastmv = timelastMovement;
+     xSemaphoreGive(SemaMovement);
+         
+
+    if ((now - timelastmv) >= (config.HoursbetweenNoMovementRep * 3600)) {
+         DEBUGPRINTLN1 ("no movement for the last period");
+          // assemble string to be displayed   
+        sprintf( buf , "Watch out: no movement in last period");
+        
+      // push morning message ------------
+          push_msg (buf,1);           
+
+     xSemaphoreTake(SemaMovement, portMAX_DELAY);
+        timelastMovement = now;
+     xSemaphoreGive(SemaMovement);
+      
+    }
+
     
  // switch according to state variable
   switch (state) {
@@ -117,10 +137,8 @@ void do_athome() {
    
       DEBUGPRINT0 ("Upload intervall (sec): ");
       DEBUGPRINTLN0 (config.MinutesBetweenUploads);
-      DEBUGPRINT0 ("Mail intervall (sec): ");
-      DEBUGPRINTLN0 (config.MinutesBetweenEmails);
-      DEBUGPRINT0 ("Push intervall (sec): ");
-      DEBUGPRINTLN0 (config.MinutesBetweenPushover);
+      DEBUGPRINT0 ("Msg after no movement (hours): ");
+      DEBUGPRINTLN0 (config.HoursbetweenNoMovementRep);
        // nothing else to do ....
     }
  
@@ -139,6 +157,7 @@ void do_athome() {
        xSemaphoreTake(SemaMovement, portMAX_DELAY);
        ath_count = movement_count;
        ath_count_day = movement_count_perday;
+       timelastmv = timelastMovement;                 // only needed for test runs
        xSemaphoreGive(SemaMovement);
 
    }
@@ -191,6 +210,12 @@ void do_athome() {
             movement_count = 0;
             xSemaphoreGive(SemaMovement);
           }
+
+//  if we are running debu, we print time last movement
+
+      if (debug_flag) {
+       DEBUGPRINT1 ("last movement at: "); DEBUGPRINTLN1 (timelastmv);
+      }
 // ------- report to cloud ----------------------------------
     }
 
@@ -213,7 +238,7 @@ void do_athome() {
     int but = digitalRead(button_test); // read input value
     if (but == LOW) { // check if the input is HIGH
       DEBUGPRINTLN1 ("button test pressed");
-      test_push("Message: Testbutton");
+      test_push ("Message: Testbutton", -1);
     }
 
 
@@ -230,7 +255,7 @@ void do_athome() {
         
         DEBUGPRINTLN1 ("Good night...");
         
-        if (debug_flag_push)     test_push("Message: begin Quitehours");     // do this if modus is test
+        if (debug_flag_push)     test_push("Message: begin Quiethours", -1);     // do this if modus is test
     }
   //  Serial.print ("Stunde: "); Serial.println (timeinfo.tm_hour);
     vTaskDelay(500 / portTICK_PERIOD_MS);
@@ -256,7 +281,7 @@ void do_away() {
         xSemaphoreGive(SemaOledSignal);
         time(&last_time_away_report);
     }
-     DEBUGPRINTLN1 ("away1...");
+     DEBUGPRINTLN2 ("away1...");
 
 
 // ------- report to cloud ----------------------------------
@@ -301,7 +326,7 @@ void do_leaving() {
       DEBUGPRINT1 ("STATE leaving - Running on core:");
       DEBUGPRINTLN1 (xPortGetCoreID());
       DEBUGPRINT1 ("timeout (sec): ");
-      DEBUGPRINTLN1 (config.TimeOutPeriodSec);
+      DEBUGPRINTLN1 (config.TimeOutLeavingSec);
       leaving_first_time = false;
        value4_oled = 2;              // signal is at leaving
       xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
@@ -323,7 +348,7 @@ void do_leaving() {
 
     time(&now_3);
   
-    if (( now_3 - leaving_start) > (config.TimeOutPeriodSec) ) {     // ok, we leave this state
+    if (( now_3 - leaving_start) > (config.TimeOutLeavingSec) ) {     // ok, we leave this state
      Serial.println ( now_3 - leaving_start);
       xSemaphoreTake(SemaMovement, portMAX_DELAY);
       movement_count = 0;
@@ -382,11 +407,11 @@ void do_night() {
    if ((  day_night_old_year == curr_year) and (day_night_old_dayofyear == curr_dayofyear)) {
         DEBUGPRINTLN2 ("No day and no year change");                        // value 2 für debug
    }
-   else if (curr_hour > config.QuietHoursEnd) {
+   else if (curr_hour >= config.QuietHoursEnd) {
       state= AWAY;                      // we change to state away and wait there for first movement
       night_first_time = true;   
       DEBUGPRINTLN1 ("Good morning...");
-      if (debug_flag_push)     test_push("Message: Morning has broken");     // do this if modus is test
+      if (debug_flag_push)     test_push("Message: Morning has broken", -1);     // do this if modus is test
     }
  
 
