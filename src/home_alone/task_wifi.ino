@@ -13,7 +13,7 @@
 
 */
 int order;
-int retwifi;
+int ret_code;
 
 
 void task_wifi ( void * parameter )
@@ -48,57 +48,66 @@ void task_wifi ( void * parameter )
 // what is there to do ??
     switch (wifi_order_struct.order) {
 
-      
+//------------------      
       case TEST_WIFI:
         DEBUGPRINTLN1 ("\t\t\t\t\twifi_task doing setup wifi");
-        retwifi = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
-        if (retwifi>5) {
-        Serial.println("\t\t\t\t\terror-error-error - no wifi 1"); 
+        ret_code = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
+        if (ret_code > 5) {
+            Serial.println("\t\t\t\t\terror-error-error - no wifi 1"); 
+            value1_oled = 7;   
         }
         else {
-        value1_oled = 0;   
-
+        value1_oled = 1;   
        }
 
-      break;
+       break;
 
+//------------------
       case REPORT_CLOUD:
         DEBUGPRINTLN1 ("\t\t\t\t\twifi_task doing report thingspeak");
 
-        retwifi = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
-        if (retwifi>5) {
-        Serial.println("\t\t\t\t\terror-error-error - no wifi 2"); 
+        ret_code = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
+        if (ret_code > 5) {
+          Serial.println("\t\t\t\t\terror-error-error - no wifi 2"); 
+          value2_oled = 7;   
         }
-        else {
-        int ret = report_toCloud(wifi_order_struct.mvcount)  ; 
+        else {              // wifi ok
+          value2_oled = 1;   
+          ret_code = report_toCloud(wifi_order_struct.mvcount)  ; 
+           if (ret_code > 0 ) value2_oled = 5;   
+        }        
+          break;
 
-        }
-        
-      break;
-
+//------------------
       case PUSH_MESG:
         DEBUGPRINT1 ("\t\t\t\t\twifi_task doing push message: ");   DEBUGPRINTLN1 ( wifi_order_struct.pushtext);
-        retwifi = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
-        if (retwifi>5) {
-        Serial.println("\t\t\t\t\terror-error-error - no wifi 3"); 
+        ret_code = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
+        if (ret_code > 5) {
+          Serial.println("\t\t\t\t\terror-error-error - no wifi 3"); 
+          value3_oled = 7;   
         }
         else {
-        int res = report_toPushover (wifi_order_struct.pushtext, wifi_order_struct.priority );  
+          value3_oled = 1;   
+          int ret_code = report_toPushover (wifi_order_struct.pushtext, wifi_order_struct.priority );  
  
         }
-
       break;
 
       default:
 
         DEBUGPRINTLN1 ("\t\t\t\t\tERROR Taskwifi wrong order");
       
-    }
+    }       // end case statement -----------------------
+
+
+     xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
+      oledsignal = 1;
+     xSemaphoreGive(SemaOledSignal);
 
     wifi_disconnect();                // disconnect unti further use
     
     DEBUGPRINTLN1 ("\t\t\t\t\twifi_task give semaphore");
-    xSemaphoreGive(wifi_semaphore);
+    xSemaphoreGive(wifi_semaphore);                           // release wifi semaphore
     vTaskDelay(100 / portTICK_PERIOD_MS); 
   }
   
@@ -161,21 +170,14 @@ int setup_wifi(int detail) {
    
       DEBUGPRINT1 ("\t\t\t\t\tConnection ok  ");
       DEBUGPRINTLN1 (use_this_cred);
-      value1_oled =1;
-      value2_oled =1;
-      xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
-      oledsignal = 1;
-      xSemaphoreGive(SemaOledSignal);
+ 
       get_time();
       if (detail >0) wifi_details();        // wifi details if needed
       return (0);                         // return retcode and credentialnumber that we used
     }
 
     else  {               
-      value2_oled =7;                       // 7 shows: no connection possible
-      xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
-      oledsignal = 1;
-      xSemaphoreGive(SemaOledSignal);
+
       return (9);                     // return retcode and credentialnumber
     }
 }

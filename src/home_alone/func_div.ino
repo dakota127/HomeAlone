@@ -12,8 +12,6 @@
 */
 // Pushover
 #include "Pushover.h"
-String Token  = "ajiu7a1odbcx9xp6op2wenoctneeik";
-String Userkey   = "uku7m4n8ru7rwf1wkmxvhbqniq4bxh";
 
 
 //----------------------------------------------------------------
@@ -41,7 +39,8 @@ void test_push(String message, int prio) {
             vTaskResume( Task1 );
             /* We have finished accessing the shared resource.  Release the
             semaphore. */
-    //        xSemaphoreGive( wifi_semaphore );
+            DEBUGPRINTLN1 ("\t\t\t\t\ttest_push give semaphore");
+              xSemaphoreGive(wifi_semaphore);                           // release wifi semaphore
         }
         else
         {
@@ -49,6 +48,11 @@ void test_push(String message, int prio) {
             the shared resource safely. */
 
             DEBUGPRINTLN1  ("wifi semaphore busy (push test msg)");
+            value3_oled = 5;   
+            xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
+              oledsignal = 1;
+            xSemaphoreGive(SemaOledSignal);        
+            
             vTaskDelay(200 / portTICK_PERIOD_MS);
 
         }
@@ -69,21 +73,18 @@ int report_toCloud(int count) {
  // Write to ThingSpeak. There are up to 8 fields in a channel, allowing you to store up to 8 different
   // pieces of information in a channel.  Here, we write to field 1.
   //  ThingSpeak.begin(client);  // Initialize ThingSpeak
-  int x = ThingSpeak.writeField(config.ThingSpeakChannelNo , 1, count, (char *)config.ThingSpeakWriteAPIKey);
-  if(x == 200){
+  int x = ThingSpeak.writeField (config.ThingSpeakChannelNo , 1, count, (char *)config.ThingSpeakWriteAPIKey);
+  if(x == 200) {
     DEBUGPRINTLN1 ("Channel update successful.");
-
-      value3_oled =1;
-      xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
-      oledsignal = 1;
-      xSemaphoreGive(SemaOledSignal);
-     wifi_disconnect();
-     return (0);
+    return (0);
   }
-  else{
+  else {
     DEBUGPRINTLN0 ("Problem updating channel. HTTP error code " + String(x));
     return(x);
   }
+
+
+
 
  }    // end report to cloud
 
@@ -94,12 +95,11 @@ int report_toCloud(int count) {
 
 int report_toPushover (String messageText, int prio) {
 
-   DEBUGPRINT1 ("report_toPushover: "); DEBUGPRINT1 (messageText);  DEBUGPRINT1 ("  prio: "); DEBUGPRINTLN1 (prio);
+  DEBUGPRINT1 ("report_toPushover: "); DEBUGPRINT1 (messageText);  DEBUGPRINT1 ("  prio: "); DEBUGPRINTLN1 (prio);
+  DEBUGPRINT1 ("devices: "); DEBUGPRINTLN1 (config.PushoverDevices);
 
-  
-  Pushover po = Pushover(Token,Userkey);
-  po.setDevice (config.PushoverDevice1);
-  po.setDevice (config.PushoverDevice2);
+  Pushover po = Pushover (config.PushoverToken,config.PushoverUserkey);
+  po.setDevice (config.PushoverDevices);
   po.setMessage (messageText);
   po.setSound ("bike");
   po.setTitle ("Home Alone");

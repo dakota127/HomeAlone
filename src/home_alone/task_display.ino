@@ -126,7 +126,7 @@ void task_display ( void * parameter )
   
     if ((but == LOW) and (oled_on == false)) { // check if the input is LOW
      DEBUGPRINTLN1 ("button oled pressed");
-     update_oled = 1;
+     oledsignal = 1;
     }
 
 // blink green led is done here since display task is the first to run

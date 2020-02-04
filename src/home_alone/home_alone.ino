@@ -151,8 +151,7 @@ struct Config {               /// config struct
   int ScreenTimeOutSeconds;
   char PushoverUserkey[30];
   char PushoverToken[30];
-  char PushoverDevice1[15];
-  char PushoverDevice2[15];
+  char PushoverDevices[30];
   int HoursbetweenNoMovementRep;
   int EveningReportingHour;
   int MorningReportingHour;

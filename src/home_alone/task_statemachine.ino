@@ -74,7 +74,7 @@ void state_machine( void * parameter )
         sprintf( buf , "Watch out: no movement in last period");
         
       // push morning message ------------
-          push_msg (buf,1);           
+          push_msg (buf,1);             // High priority message       
 
      xSemaphoreTake(SemaMovement, portMAX_DELAY);
         timelastMovement = now;
@@ -191,13 +191,18 @@ void do_athome() {
         {
             /* We could not obtain the semaphore and can therefore not access
             the shared resource safely. */
-
-            DEBUGPRINTLN1  ("wifi semaphore busy (cloud reporting)");
+           DEBUGPRINTLN1  ("wifi semaphore busy (cloud reporting)");
+            value3_oled = 4;   
+            xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
+            oledsignal = 1;
+            xSemaphoreGive(SemaOledSignal);        
             vTaskDelay(200 / portTICK_PERIOD_MS);
 
         }
     
-       
+          DEBUGPRINTLN1 ("\t\t\t\t\tat_home give wifisemaphore");
+          xSemaphoreGive(wifi_semaphore);                           // release wifi semaphore
+ 
        
   
 
@@ -238,7 +243,7 @@ void do_athome() {
     int but = digitalRead(button_test); // read input value
     if (but == LOW) { // check if the input is HIGH
       DEBUGPRINTLN1 ("button test pressed");
-      test_push ("Message: Testbutton", -1);
+      test_push ("Message: Testbutton", 1);           // use priority 1 HIGH
     }
 
 
@@ -255,7 +260,7 @@ void do_athome() {
         
         DEBUGPRINTLN1 ("Good night...");
         
-        if (debug_flag_push)     test_push("Message: begin Quiethours", -1);     // do this if modus is test
+        if (debug_flag_push)     test_push  ("Message: begin Quiethours", -1);     // do this if modus is test
     }
   //  Serial.print ("Stunde: "); Serial.println (timeinfo.tm_hour);
     vTaskDelay(500 / portTICK_PERIOD_MS);

@@ -181,13 +181,20 @@ int push_msg (String text, int prio){
         vTaskResume( Task1 );
             /* We have finished accessing the shared resource.  Release the
             semaphore. */
-    //        xSemaphoreGive( wifi_semaphore );
+           DEBUGPRINTLN1 ("\t\t\t\t\tpush_msg give semaphore");
+           xSemaphoreGive(wifi_semaphore);                           // release wifi semaphore
+ 
       }
       else  {
             /* We could not obtain the semaphore and can therefore not access
             the shared resource safely. */
 
         DEBUGPRINTLN2 ("\t\twifi semaphore busy (push msg)");
+
+        value3_oled = 6;   
+        xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
+         oledsignal = 1;
+        xSemaphoreGive(SemaOledSignal);        
         vTaskDelay(200 / portTICK_PERIOD_MS);
       }
  

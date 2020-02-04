@@ -125,13 +125,10 @@ config.MinutesBetweenUploads = config.MinutesBetweenUploads * 60;
           doc["Email2"] | "example.ch",  // <- source
           sizeof(config.Email_2));         // <- destination's capacity
 
-  strlcpy(config.PushoverDevice1,                  // <- destination
-          doc["PushoverDevice1"] | "example.ch",  // <- source
-          sizeof(config.PushoverDevice1));         // <- destination's capacity
+  strlcpy(config.PushoverDevices,                  // <- destination
+          doc["PushoverDevices"] | "example.ch",  // <- source
+          sizeof(config.PushoverDevices));         // <- destination's capacity
   
-  strlcpy(config.PushoverDevice2,                  // <- destination
-          doc["PushoverDevice2"] | "example.ch",  // <- source
-          sizeof(config.PushoverDevice2));         // <- destination's capacity
 
 
 
@@ -159,10 +156,13 @@ config.HoursbetweenNoMovementRep =   doc["HoursbetweenNoMovementRep"]; // 30
        config.QuietHoursEnd = 7;        // <------------------------
        config.HoursbetweenNoMovementRep = 3;
        config.MorningReportingHour = 11;      // <-------------------------------------
-       config.HoursbetweenNoMovementRep = HOURSBETWEENNOMOV;
+   
        printFile(filename);
+      }
       
-    }
+    if (debug_flag_push)            // do this whenever we test important functions
+      config.HoursbetweenNoMovementRep = HOURSBETWEENNOMOV;
+      
      printConfig();           // do this every time
 }
 //--------------------------------------------------------------------
@@ -218,8 +218,7 @@ void printConfig() {
  Serial.println (config.PushoverUserkey); 
   Serial.println(config.PushoverToken); 
 
-  Serial.println (config.PushoverDevice1);
-  Serial.println (config.PushoverDevice2);
+  Serial.println (config.PushoverDevices);
   Serial.println (config.HoursbetweenNoMovementRep);
   Serial.println (config.EveningReportingHour);
   Serial.println (config.MorningReportingHour);
