@@ -35,11 +35,11 @@ void test_push(String message, int prio) {
             wifi_order_struct.order = wifi_todo;
             wifi_order_struct.pushtext = message;
             wifi_order_struct.priority = prio;             // 1 is HIGH  
-            DEBUGPRINTLN1 (wifi_order_struct.pushtext);
+            DEBUGPRINTLN2 (wifi_order_struct.pushtext);
             vTaskResume( Task1 );
             /* We have finished accessing the shared resource.  Release the
             semaphore. */
-            DEBUGPRINTLN1 ("\t\t\t\t\ttest_push give semaphore");
+            DEBUGPRINTLN2 ("\t\t\t\t\ttest_push give semaphore");
               xSemaphoreGive(wifi_semaphore);                           // release wifi semaphore
         }
         else
@@ -97,6 +97,7 @@ int report_toPushover (String messageText, int prio) {
 
   DEBUGPRINT1 ("report_toPushover: "); DEBUGPRINT1 (messageText);  DEBUGPRINT1 ("  prio: "); DEBUGPRINTLN1 (prio);
   DEBUGPRINT1 ("devices: "); DEBUGPRINTLN1 (config.PushoverDevices);
+  DEBUGPRINT1 ("token: "); DEBUGPRINT1 (config.PushoverToken); DEBUGPRINT1 ("  Key: "); DEBUGPRINTLN1 (config.PushoverUserkey);
 
   Pushover po = Pushover (config.PushoverToken,config.PushoverUserkey);
   po.setDevice (config.PushoverDevices);

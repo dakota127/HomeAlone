@@ -82,19 +82,18 @@ void task_display ( void * parameter )
        update_oled = 1;
        if (debug_flag > 0) config.ScreenTimeOutSeconds  += 20;     // increase display on time if debug is on 
       // nothing else to do ....
-    }
+    }  // end first time .......
+    
 
+// if another task wants to switch oled on, the oled signal will be set 
     xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
     if (oledsignal > 0)  update_oled = 1;
     oledsignal = 0;
     xSemaphoreGive(SemaOledSignal);
 
-  //  Serial.print("oled-update: ");
-  //  Serial.println (update_oled);
-
     
     if (update_oled > 0)  {
-      DEBUGPRINTLN2("oled_display ");
+      DEBUGPRINTLN2("oled_display ON");
       
     // assemble string to be displayed   
       sprintf( oled_buf , "%d  %d  %d  %c %d", value1_oled, value2_oled, value3_oled, state_display[value4_oled], movement_count);
@@ -124,9 +123,9 @@ void task_display ( void * parameter )
   //  read ole pin: presses means: switch display on for a number of seconds -----------
     int but = digitalRead(button_oledPin); // read input value
   
-    if ((but == LOW) and (oled_on == false)) { // check if the input is LOW
+    if (but == LOW)  { // check if the input is LOW
      DEBUGPRINTLN1 ("button oled pressed");
-     oledsignal = 1;
+     update_oled = 1;
     }
 
 // blink green led is done here since display task is the first to run

@@ -149,8 +149,8 @@ struct Config {               /// config struct
   int QuietHoursStart;
   int QuietHoursEnd;
   int ScreenTimeOutSeconds;
-  char PushoverUserkey[30];
-  char PushoverToken[30];
+  char PushoverUserkey[32];
+  char PushoverToken[32];
   char PushoverDevices[30];
   int HoursbetweenNoMovementRep;
   int EveningReportingHour;
@@ -278,7 +278,7 @@ void setup() {
   day_night_old_year = 0;
  
            
-  DEBUGPRINTLN1 ("about to start task1");
+  DEBUGPRINTLN2 ("about to start task1");
   vTaskDelay(100 / portTICK_PERIOD_MS);    // start oled task first on core 1
 
 // --------- start function do_oled in a separate task -------------------------------------- 
@@ -366,20 +366,20 @@ void setup() {
 
 
 
-  DEBUGPRINTLN1 ("about to start task2");             // clock 
+  DEBUGPRINTLN2 ("about to start task2");             // clock 
 //  task can only be started after time is available...
   vTaskDelay(100 / portTICK_PERIOD_MS);
   xTaskCreatePinnedToCore ( task_clock,"clock", 5000, NULL, TASK_PRIORITY, &Task2, CORE_1);
 
   vTaskDelay(200 / portTICK_PERIOD_MS);
 
-   DEBUGPRINTLN1 ("about to start task3");
+   DEBUGPRINTLN2 ("about to start task3");
    vTaskDelay(100 / portTICK_PERIOD_MS);
    xTaskCreatePinnedToCore (task_detect, "Movement", 2000, NULL, TASK_PRIORITY, &Task3, CORE_0);                 
 
    vTaskDelay(200 / portTICK_PERIOD_MS);
 
-   DEBUGPRINTLN1 ("about to start task4");
+   DEBUGPRINTLN2 ("about to start task4");
    vTaskDelay(100 / portTICK_PERIOD_MS);
 
 // Tast state machine  - the main loop

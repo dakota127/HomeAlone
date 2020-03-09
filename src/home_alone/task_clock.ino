@@ -34,8 +34,8 @@ void task_clock ( void * parameter )
 
  // do first time through.......   
     if (clock_firsttime) {
-      DEBUGPRINT1 ("\t\tTASK clock - Running on core: ");
-      DEBUGPRINTLN1 (xPortGetCoreID());
+      DEBUGPRINT2 ("\t\tTASK clock - Running on core: ");
+      DEBUGPRINTLN2 (xPortGetCoreID());
       clock_firsttime = false;
       time(&last_time_clock_1);            
       vTaskDelay(5000 / portTICK_PERIOD_MS);
@@ -50,8 +50,8 @@ void task_clock ( void * parameter )
     curr_dayofyear = timeinfo.tm_yday;
     curr_year = timeinfo.tm_year -100;   // function returns year since 
        
-    DEBUGPRINT2 ("\t\t");  DEBUGPRINT2 ("old_hour:");  DEBUGPRINT2 (old_hour);   DEBUGPRINT2 (" old_dayofyear: ");   DEBUGPRINT2 (old_dayofyear);  DEBUGPRINT2 (" old_year: ");   DEBUGPRINTLN2 (old_year); 
-    DEBUGPRINT2 ("\t\t");  DEBUGPRINT2 ("curr_hour:");  DEBUGPRINT2 (curr_hour);   DEBUGPRINT2 (" curr_dayofyear: ");   DEBUGPRINT2 (curr_dayofyear); DEBUGPRINT2 (" curr_year: ");   DEBUGPRINTLN2 (curr_year);  
+    DEBUGPRINT3 ("\t\t");  DEBUGPRINT3 ("old_hour:");  DEBUGPRINT3 (old_hour);   DEBUGPRINT3 (" old_dayofyear: ");   DEBUGPRINT3 (old_dayofyear);  DEBUGPRINT3 (" old_year: ");   DEBUGPRINTLN3 (old_year); 
+    DEBUGPRINT3 ("\t\t");  DEBUGPRINT3 ("curr_hour:");  DEBUGPRINT3 (curr_hour);   DEBUGPRINT3 (" curr_dayofyear: ");   DEBUGPRINT3 (curr_dayofyear); DEBUGPRINT3 (" curr_year: ");   DEBUGPRINTLN3 (curr_year);  
 
 // get the movement counts (protected by semaphore
 
@@ -104,7 +104,7 @@ void task_clock ( void * parameter )
     }
    }
    else {
-        DEBUGPRINT2 ("\t\t");
+        DEBUGPRINT3 ("\t\t");
         DEBUGPRINTLN2 ("No day and no year change 2");                        // value 2 für debug
    }
 

@@ -25,17 +25,17 @@ void task_wifi ( void * parameter )
   for (;;) {                          // runs until doomsday 
     
     if (wifi_firsttime) {
-      DEBUGPRINT1 ("\t\t\t\t\tTASK wifi_task - Running on core:");
-      DEBUGPRINTLN1 (xPortGetCoreID());
+      DEBUGPRINT3 ("\t\t\t\t\tTASK wifi_task - Running on core:");
+      DEBUGPRINTLN3 (xPortGetCoreID());
       wifi_firsttime = false;
      // nothing else to do ....
     }
 
 // ------------- suspend the wifi task until some other task wakes it up with TaskResume() -------
 //------------------------------------------------------------------------------------------------
-    DEBUGPRINTLN1 ("\t\t\t\t\twifi_task suspend");
+    DEBUGPRINTLN2 ("\t\t\t\t\twifi_task suspend");
     vTaskSuspend( NULL );
-    DEBUGPRINTLN1 ("\t\t\t\t\twifi_task resume");
+    DEBUGPRINTLN2 ("\t\t\t\t\twifi_task resume");
 
 //  somebody has issued a resume and that means there is work to do..... ------------------------
 //-----------------------------------------------------------------------------------------------
@@ -50,7 +50,7 @@ void task_wifi ( void * parameter )
 
 //------------------      
       case TEST_WIFI:
-        DEBUGPRINTLN1 ("\t\t\t\t\twifi_task doing setup wifi");
+        DEBUGPRINTLN3 ("\t\t\t\t\twifi_task doing setup wifi");
         ret_code = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
         if (ret_code > 5) {
             Serial.println("\t\t\t\t\terror-error-error - no wifi 1"); 
@@ -135,14 +135,14 @@ int setup_wifi(int detail) {
     wifi_firsttime = false;
   }
   
-  DEBUGPRINT1 ("\t\t\t\t\tsetup_wifi: "); DEBUGPRINT1 (use_this_cred); DEBUGPRINT1 (detail);  DEBUGPRINTLN1 (anz_credentials);
+  DEBUGPRINT2 ("\t\t\t\t\tsetup_wifi: "); DEBUGPRINT2 (use_this_cred); DEBUGPRINT2 (detail);  DEBUGPRINTLN2 (anz_credentials);
   int i = 0;
 
 //  Check all of the available wifi credentials 
   if (use_all_credentials == true) {
   
     while ((connection == false) &  ((anz_credentials - i) >0)) {
-      DEBUGPRINT1 ("\t\t\t\t\tTry to connect1:");  DEBUGPRINT1 (credentials[(2*i)]); DEBUGPRINT1 ("/"); DEBUGPRINTLN1 (credentials[(2*i)+1]); 
+      DEBUGPRINT2 ("\t\t\t\t\tTry to connect1:");  DEBUGPRINT2 (credentials[(2*i)]); DEBUGPRINT2 ("/"); DEBUGPRINTLN2 (credentials[(2*i)+1]); 
       timeout = false;
 
       ret = wifi_connect (credentials[(2*i)], credentials[(2*i)+1]);
@@ -158,7 +158,7 @@ int setup_wifi(int detail) {
   
   // use the credentials that were used at the begin of the sketch
   else {
-    DEBUGPRINT1 ("\t\t\t\t\tTry to connect2:");  DEBUGPRINT1 (credentials[(2*use_this_cred)]); DEBUGPRINT1 ("/"); DEBUGPRINTLN1 (credentials[(2*use_this_cred)+1]); ; 
+    DEBUGPRINT2 ("\t\t\t\t\tTry to connect2:");  DEBUGPRINT2 (credentials[(2*use_this_cred)]); DEBUGPRINT2 ("/"); DEBUGPRINTLN2 (credentials[(2*use_this_cred)+1]); ; 
  
     ret = wifi_connect(credentials[(2*use_this_cred)], credentials[(2*use_this_cred)+1]);
 
@@ -169,7 +169,7 @@ int setup_wifi(int detail) {
    if (connection)   {
    
       DEBUGPRINT1 ("\t\t\t\t\tConnection ok  ");
-      DEBUGPRINTLN1 (use_this_cred);
+      DEBUGPRINTLN2 (use_this_cred);
  
       get_time();
       if (detail >0) wifi_details();        // wifi details if needed
@@ -200,7 +200,7 @@ int wifi_connect( char *ssid, char *pw) {
         break; 
     }
     vTaskDelay(300 / portTICK_PERIOD_MS); 
-    DEBUGPRINT2 ("."); 
+    DEBUGPRINT3 ("."); 
   }
   if (!timeout) return (0);
   else return(9); 
@@ -210,14 +210,14 @@ int wifi_connect( char *ssid, char *pw) {
 //--------------------------------------------------
 void wifi_details()
 {
-   DEBUGPRINTLN1    ("");
-   DEBUGPRINT1    ("WiFi connected to SSID: ");
-   DEBUGPRINTLN1    (WiFi.SSID());
-   DEBUGPRINT1    ("IP address: ");
-   DEBUGPRINTLN1    (WiFi.localIP());
-   DEBUGPRINTLN1    ("\nWiFi Details:");
+   DEBUGPRINTLN3    ("");
+   DEBUGPRINT3    ("WiFi connected to SSID: ");
+   DEBUGPRINTLN3    (WiFi.SSID());
+   DEBUGPRINT3    ("IP address: ");
+   DEBUGPRINTLN3    (WiFi.localIP());
+   DEBUGPRINTLN3    ("\nWiFi Details:");
    WiFi.printDiag(Serial);
-   DEBUGPRINTLN1    ("");
+   DEBUGPRINTLN3    ("");
 }
 
 
@@ -228,7 +228,7 @@ void wifi_disconnect () {
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
 
-  DEBUGPRINTLN1 ("\t\t\t\t\tWifi disconnected");
+  DEBUGPRINTLN3 ("\t\t\t\t\tWifi disconnected");
 
 }
 
@@ -239,13 +239,14 @@ int get_time() {
  configTime(0, 0, config.NTPPool);
   // See https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv for Timezone codes for your region
   setenv("TZ", config.Timezone_Info, 1);
-  DEBUGPRINTLN1 (config.Timezone_Info);
+  DEBUGPRINTLN2 (config.Timezone_Info);
 
      if (getNTPtime(10)) {  // wait up to 10sec to sync
         } 
       else {
           DEBUGPRINTLN0 ("Time not set");
-   // ESP.restart();
+          vTaskDelay(300 / portTICK_PERIOD_MS); 
+          ESP.restart();
         }
     if (debug_flag)  showTime(timeinfo); 
     lastNTPtime = time(&now);
@@ -259,7 +260,7 @@ int get_time() {
 
 bool getNTPtime(int sec) {
 
-  DEBUGPRINTLN1 ("get time");
+  DEBUGPRINTLN2 ("get time");
 
   {
     uint32_t start = millis();
@@ -271,7 +272,7 @@ bool getNTPtime(int sec) {
     } while (((millis() - start) <= (1000 * sec)) && (timeinfo.tm_year < (2016 - 1900)));
     
     if (timeinfo.tm_year <= (2016 - 1900)) return false;  // the NTP call was not successful
-    DEBUGPRINT1 ("now ");  DEBUGPRINTLN1 (now);
+    DEBUGPRINT2 ("now ");  DEBUGPRINTLN2 (now);
     char time_output[30];
     strftime(time_output, 30, "%a  %d-%m-%y %T", localtime(&now));
     if (debug_flag) {

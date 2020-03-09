@@ -47,14 +47,15 @@ void state_machine( void * parameter )
   for (;;) {
 
     if (main_firsttime) {
-      DEBUGPRINT1 ("TASK state_machine - Running on core:");
-      DEBUGPRINTLN1 (xPortGetCoreID());
+      DEBUGPRINT2 ("TASK state_machine - Running on core:");
+      DEBUGPRINTLN2 (xPortGetCoreID());
       main_firsttime = false;
       state = ATHOME;                   // initial state of state machine
 
     }
 
 // stuff we do irrelevant of state --------
+//-----------------------------------------
     time(&now);
     localtime_r (&now, &timeinfo);
   
@@ -82,8 +83,25 @@ void state_machine( void * parameter )
       
     }
 
-    
- // switch according to state variable
+
+// check if quitehours reached -------------------------
+// change state to night if this happened---------------
+  
+   
+    if (curr_hour >= config.QuietHoursStart) {
+        state= NIGHT;
+        day_night_old_dayofyear = curr_dayofyear;
+        day_night_old_year = curr_year;   // function returns year since 1900
+        athome_first_time = true;       // reset for next time, morning
+        night_first_time = true;        // reset
+        DEBUGPRINTLN1 ("Good night...");
+        if (debug_flag_push)     test_push  ("Message: begin Quiethours", -1);     // do this if modus is test
+    }
+ 
+
+// state machine implementation starts here
+// switch according to state variable
+
   switch (state) {
 
     case ATHOME:
@@ -126,8 +144,8 @@ void do_athome() {
 
 
     if (athome_first_time) {
-      DEBUGPRINT1("STATE athome - Running on core:");
-      DEBUGPRINTLN1(xPortGetCoreID());
+      DEBUGPRINT2("STATE athome - Running on core:");
+      DEBUGPRINTLN2(xPortGetCoreID());
       athome_first_time = false;
       value4_oled = 1;              // signal is at home
       xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
@@ -135,10 +153,10 @@ void do_athome() {
       xSemaphoreGive(SemaOledSignal);
       
    
-      DEBUGPRINT0 ("Upload intervall (sec): ");
-      DEBUGPRINTLN0 (config.MinutesBetweenUploads);
-      DEBUGPRINT0 ("Msg after no movement (hours): ");
-      DEBUGPRINTLN0 (config.HoursbetweenNoMovementRep);
+      DEBUGPRINT1 ("Upload intervall (sec): ");
+      DEBUGPRINTLN1 (config.MinutesBetweenUploads);
+      DEBUGPRINT1 ("Msg after no movement (hours): ");
+      DEBUGPRINTLN1 (config.HoursbetweenNoMovementRep);
        // nothing else to do ....
     }
  
@@ -247,6 +265,7 @@ void do_athome() {
     }
 
 
+/*
 
 // check if quitehours reached -------------------------
 // change state to night if this happened---------------
@@ -263,6 +282,9 @@ void do_athome() {
         if (debug_flag_push)     test_push  ("Message: begin Quiethours", -1);     // do this if modus is test
     }
   //  Serial.print ("Stunde: "); Serial.println (timeinfo.tm_hour);
+ 
+ */   
+    
     vTaskDelay(500 / portTICK_PERIOD_MS);
 //  DEBUGPRINTLN1 ("do_athome(
 
@@ -277,8 +299,8 @@ void do_athome() {
 void do_away() {
 
      if (away_first_time) {
-        DEBUGPRINT1 ("STATE away - Running on core:");
-        DEBUGPRINTLN1 (xPortGetCoreID());
+        DEBUGPRINT2 ("STATE away - Running on core:");
+        DEBUGPRINTLN2 (xPortGetCoreID());
         away_first_time = false;
         value4_oled = 3;              // signal is away
         xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
@@ -286,14 +308,14 @@ void do_away() {
         xSemaphoreGive(SemaOledSignal);
         time(&last_time_away_report);
     }
-     DEBUGPRINTLN2 ("away1...");
+     DEBUGPRINTLN3 ("away1...");
 
 
 // ------- report to cloud ----------------------------------
     time(&now_4);
     if (( now_4 - last_time_away_report) > config.MinutesBetweenUploads ) {         
           time(&last_time_away_report);
-          DEBUGPRINTLN1 ("away report this fact");
+          DEBUGPRINTLN2 ("away report this fact");
 
           int res = report_toCloud(-2);  
      
@@ -328,10 +350,10 @@ void do_away() {
 //---------------------------------------------------------------
 void do_leaving() {
     if (leaving_first_time) {
-      DEBUGPRINT1 ("STATE leaving - Running on core:");
-      DEBUGPRINTLN1 (xPortGetCoreID());
-      DEBUGPRINT1 ("timeout (sec): ");
-      DEBUGPRINTLN1 (config.TimeOutLeavingSec);
+      DEBUGPRINT2 ("STATE leaving - Running on core:");
+      DEBUGPRINTLN2 (xPortGetCoreID());
+      DEBUGPRINT2 ("timeout (sec): ");
+      DEBUGPRINTLN2 (config.TimeOutLeavingSec);
       leaving_first_time = false;
        value4_oled = 2;              // signal is at leaving
       xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
@@ -386,17 +408,14 @@ void do_night() {
         xSemaphoreGive(SemaOledSignal);
         time(&last_time_away_report);
     }
-     DEBUGPRINTLN1 ("night...");
+     DEBUGPRINTLN3 ("night...");
 
 
 //  we do nothing during quiet hours
 //  after morning we change to state away where we remain until the first movement
-
-    vTaskDelay(200 / portTICK_PERIOD_MS);
-
   
 
-  vTaskDelay(3000 / portTICK_PERIOD_MS);
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
     
 
 
@@ -405,15 +424,15 @@ void do_night() {
 //------------------------------------------------
 
     
-  DEBUGPRINT2 (curr_dayofyear);  DEBUGPRINT2 (" / "); DEBUGPRINTLN2 (day_night_old_dayofyear); 
-  DEBUGPRINT2 (curr_year);  DEBUGPRINT2 (" / ");  DEBUGPRINTLN2 (day_night_old_year); 
-  DEBUGPRINT2 (curr_hour);  DEBUGPRINT2 (" / ");  DEBUGPRINTLN2 (config.QuietHoursEnd); 
+  DEBUGPRINT3 (curr_dayofyear);  DEBUGPRINT3 (" / "); DEBUGPRINTLN3 (day_night_old_dayofyear); 
+  DEBUGPRINT3 (curr_year);  DEBUGPRINT3 (" / ");  DEBUGPRINTLN3 (day_night_old_year); 
+  DEBUGPRINT3 (curr_hour);  DEBUGPRINT3 (" / ");  DEBUGPRINTLN3 (config.QuietHoursEnd); 
 
    if ((  day_night_old_year == curr_year) and (day_night_old_dayofyear == curr_dayofyear)) {
-        DEBUGPRINTLN2 ("No day and no year change");                        // value 2 für debug
+        DEBUGPRINTLN3 ("No day and no year change");                        // value 2 für debug
    }
    else if (curr_hour >= config.QuietHoursEnd) {
-      state= AWAY;                      // we change to state away and wait there for first movement
+      state= ATHOME;                      // we change to state away and wait there for first movement
       night_first_time = true;   
       DEBUGPRINTLN1 ("Good morning...");
       if (debug_flag_push)     test_push("Message: Morning has broken", -1);     // do this if modus is test

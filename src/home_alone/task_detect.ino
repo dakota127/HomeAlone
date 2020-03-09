@@ -20,8 +20,8 @@ void task_detect ( void * parameter )
   
 
     if (detect_first_time) {
-      DEBUGPRINT1 ("TASK detect - Running on core:");
-      DEBUGPRINTLN1 (xPortGetCoreID());
+      DEBUGPRINT3 ("TASK detect - Running on core:");
+      DEBUGPRINTLN3 (xPortGetCoreID());
       detect_first_time = false;
       timelastMovement = now;                            // Initiate time last movement
        // nothing else to do ....
@@ -34,7 +34,7 @@ void task_detect ( void * parameter )
    
       if (pirState == LOW) {
 // we have just turned on
-       DEBUGPRINTLN1 ("Motion detected!");
+       DEBUGPRINTLN2 ("Motion detected!");
 // We only want to print on the output change, not state
         pirState = HIGH;
       }
@@ -43,7 +43,7 @@ void task_detect ( void * parameter )
       digitalWrite(redledPin, LOW); // turn LED OFF
       if (pirState == HIGH){
 // we have just turned of
-       DEBUGPRINTLN1 ("Motion ended!");
+       DEBUGPRINTLN2 ("Motion ended!");
    
         
 // We only want to print on the output change, not state
@@ -60,7 +60,7 @@ void task_detect ( void * parameter )
          
          xSemaphoreGive(SemaMovement);
 
-        DEBUGPRINT1 ("count now: ");  DEBUGPRINT1 (count); DEBUGPRINT1 (" / ");  DEBUGPRINT1 (count_day); DEBUGPRINT1 (" - ");  DEBUGPRINTLN1 (timelastMovement);
+        DEBUGPRINT2 ("count now: ");  DEBUGPRINT2 (count); DEBUGPRINT2 (" / ");  DEBUGPRINT2 (count_day); DEBUGPRINT2 (" - ");  DEBUGPRINTLN2 (timelastMovement);
 
       }
     }

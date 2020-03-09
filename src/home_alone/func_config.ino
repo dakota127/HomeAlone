@@ -28,7 +28,7 @@ int loadConfig (const char *filename, Config &config) {
   int anz_try = 0;
   bool failed = false;
 
-   DEBUGPRINTLN1 ("start load config...");
+   DEBUGPRINTLN2 ("start load config...");
    delay(300);
    
    while (!SD.begin(chipSelect))  { 
@@ -41,7 +41,7 @@ int loadConfig (const char *filename, Config &config) {
             return (9);
           }
           delay(100);  
-         DEBUGPRINT1 ("."); 
+         DEBUGPRINT2 ("."); 
         }
   
 
@@ -53,7 +53,7 @@ int loadConfig (const char *filename, Config &config) {
   // Don't forget to change the capacity to match your requirements.
   // Use arduinojson.org/v6/assistant to compute the capacity.
 
-  StaticJsonDocument<1200> doc;
+  StaticJsonDocument<1300> doc;
 
 
 
@@ -148,6 +148,8 @@ config.HoursbetweenNoMovementRep =   doc["HoursbetweenNoMovementRep"]; // 30
   file.close();
 
    // Dump config file
+
+
   
    if (debug_flag) {
        config.MinutesBetweenUploads = UPLOAD_INTERVALL_TEST;   // set for debug and test
@@ -159,9 +161,11 @@ config.HoursbetweenNoMovementRep =   doc["HoursbetweenNoMovementRep"]; // 30
    
        printFile(filename);
       }
-      
+
+  /*    
     if (debug_flag_push)            // do this whenever we test important functions
       config.HoursbetweenNoMovementRep = HOURSBETWEENNOMOV;
+  */
       
      printConfig();           // do this every time
 }
