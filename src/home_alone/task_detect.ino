@@ -65,15 +65,6 @@ void task_detect ( void * parameter )
       }
     }
 
-    int but = digitalRead(button_awayPin); // read input value
-    if (but == LOW) { // check if the input is HIGH
-     DEBUGPRINTLN1 ("button away pressed");
-      xSemaphoreTake(SemaButton, portMAX_DELAY);
-        button_awaypressed = 1;
-      xSemaphoreGive(SemaButton);
-      
- 
-    }
 
   // Pause the task for 500ms
     vTaskDelay(500 / portTICK_PERIOD_MS);

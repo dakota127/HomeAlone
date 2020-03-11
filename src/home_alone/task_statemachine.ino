@@ -84,19 +84,7 @@ void state_machine( void * parameter )
     }
 
 
-// check if quitehours reached -------------------------
-// change state to night if this happened---------------
-  
-   
-    if (curr_hour >= config.QuietHoursStart) {
-        state= NIGHT;
-        day_night_old_dayofyear = curr_dayofyear;
-        day_night_old_year = curr_year;   // function returns year since 1900
-        athome_first_time = true;       // reset for next time, morning
-        night_first_time = true;        // reset
-        DEBUGPRINTLN1 ("Good night...");
-        if (debug_flag_push)     test_push  ("Message: begin Quiethours", -1);     // do this if modus is test
-    }
+
  
 
 // state machine implementation starts here
@@ -244,46 +232,35 @@ void do_athome() {
 
 
 
-// check if button I am leaving is pressed --------------
-     xSemaphoreTake(SemaButton, portMAX_DELAY);
-     int butto = button_awaypressed;
-     xSemaphoreGive(SemaButton);
 
-      if (butto >0) {
-        state= LEAVING;
-        athome_first_time = true;  
+    int but = digitalRead(button_awayPin); // read input value
+    if (but == LOW) { // check if the input is HIGH
+      DEBUGPRINTLN1 ("button away pressed");
+      state= LEAVING;
+      athome_first_time = true;  
       }
 
 //   char time_output[30];
 //    strftime(time_output, 30, "%a  %d-%m-%y %T", localtime(&now2));
 
 // check if test button is pressed, send pushmesage if so....--------
-    int but = digitalRead(button_test); // read input value
+    but = digitalRead(button_test); // read input value
     if (but == LOW) { // check if the input is HIGH
       DEBUGPRINTLN1 ("button test pressed");
       test_push ("Message: Testbutton", 1);           // use priority 1 HIGH
     }
 
 
-/*
 
 // check if quitehours reached -------------------------
 // change state to night if this happened---------------
   
    
     if (curr_hour >= config.QuietHoursStart) {
-        state= NIGHT;
-        athome_first_time = true;   
-        day_night_old_dayofyear = timeinfo.tm_yday;
-        day_night_old_year = timeinfo.tm_year -100;   // function returns year since 1900
-        
-        DEBUGPRINTLN1 ("Good night...");
-        
-        if (debug_flag_push)     test_push  ("Message: begin Quiethours", -1);     // do this if modus is test
+      state= NIGHT;
+      athome_first_time = true;   
     }
-  //  Serial.print ("Stunde: "); Serial.println (timeinfo.tm_hour);
- 
- */   
+    
     
     vTaskDelay(500 / portTICK_PERIOD_MS);
 //  DEBUGPRINTLN1 ("do_athome(
@@ -322,6 +299,10 @@ void do_away() {
         }
 // ------- report to cloud ----------------------------------
 
+    if (curr_hour >= config.QuietHoursStart) {
+      state= NIGHT;
+      away_first_time = true;   
+    }
 
     
    vTaskDelay(200 / portTICK_PERIOD_MS);
@@ -398,6 +379,8 @@ void do_leaving() {
 //---------------------------------------------------------------
 void do_night() {
 
+  int next_state = ATHOME;
+  
      if (night_first_time) {
         DEBUGPRINT1 ("STATE night - Running on core:");
         DEBUGPRINTLN1 (xPortGetCoreID());
@@ -407,7 +390,23 @@ void do_night() {
         oledsignal = 1;
         xSemaphoreGive(SemaOledSignal);
         time(&last_time_away_report);
+
+        day_night_old_dayofyear = curr_dayofyear;       // keep beginning of night
+        day_night_old_year = curr_year;   // function returns year since 1900
+        
+        DEBUGPRINTLN1 ("Good night...");
+        
+        if (debug_flag_push)     test_push  ("Message: begin Quiethours", -1);     // do this if modus is test
     }
+
+
+        int but = digitalRead(button_awayPin); // read input value
+    if (but == LOW) { // check if the input is HIGH
+      DEBUGPRINTLN1 ("button away pressed");
+      next_state= AWAY;
+      night_first_time = true;  
+      }    
+ 
      DEBUGPRINTLN3 ("night...");
 
 
@@ -432,7 +431,7 @@ void do_night() {
         DEBUGPRINTLN3 ("No day and no year change");                        // value 2 für debug
    }
    else if (curr_hour >= config.QuietHoursEnd) {
-      state= ATHOME;                      // we change to state away and wait there for first movement
+      state= next_state;                      // change state
       night_first_time = true;   
       DEBUGPRINTLN1 ("Good morning...");
       if (debug_flag_push)     test_push("Message: Morning has broken", -1);     // do this if modus is test
