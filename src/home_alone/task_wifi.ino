@@ -16,41 +16,15 @@ int order;
 int ret_code;
 
 
-void task_wifi ( void * parameter )
+int wifi_func ()
 {
-
- 
- static bool wifi_firsttime = true ;
-
-  for (;;) {                          // runs until doomsday 
-    
-    if (wifi_firsttime) {
-      DEBUGPRINT3 ("\t\t\t\t\tTASK wifi_task - Running on core:");
-      DEBUGPRINTLN3 (xPortGetCoreID());
-      wifi_firsttime = false;
-     // nothing else to do ....
-    }
-
-// ------------- suspend the wifi task until some other task wakes it up with TaskResume() -------
-//------------------------------------------------------------------------------------------------
-    DEBUGPRINTLN2 ("\t\t\t\t\twifi_task suspend");
-    vTaskSuspend( NULL );
-    DEBUGPRINTLN2 ("\t\t\t\t\twifi_task resume");
-
-//  somebody has issued a resume and that means there is work to do..... ------------------------
-//-----------------------------------------------------------------------------------------------
-
-    vTaskDelay(500 / portTICK_PERIOD_MS);           // there is no rush...
-
-  //   xSemaphoreTake(wifi_semaphore, portMAX_DELAY);
-   
 
 // what is there to do ??
     switch (wifi_order_struct.order) {
 
 //------------------      
       case TEST_WIFI:
-        DEBUGPRINTLN3 ("\t\t\t\t\twifi_task doing setup wifi");
+        DEBUGPRINTLN3 ("\t\t\t\t\twifi_func doing setup wifi");
         ret_code = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
         if (ret_code > 5) {
             Serial.println("\t\t\t\t\terror-error-error - no wifi 1"); 
@@ -64,7 +38,7 @@ void task_wifi ( void * parameter )
 
 //------------------
       case REPORT_CLOUD:
-        DEBUGPRINTLN1 ("\t\t\t\t\twifi_task doing report thingspeak");
+        DEBUGPRINTLN1 ("\t\t\t\t\twifi_func doing report thingspeak");
 
         ret_code = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
         if (ret_code > 5) {
@@ -80,7 +54,7 @@ void task_wifi ( void * parameter )
 
 //------------------
       case PUSH_MESG:
-        DEBUGPRINT1 ("\t\t\t\t\twifi_task doing push message: ");   DEBUGPRINTLN1 ( wifi_order_struct.pushtext);
+        DEBUGPRINT1 ("\t\t\t\t\twifi_func doing push message: ");   DEBUGPRINTLN1 ( wifi_order_struct.pushtext);
         ret_code = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
         if (ret_code > 5) {
           Serial.println("\t\t\t\t\terror-error-error - no wifi 3"); 
@@ -88,8 +62,11 @@ void task_wifi ( void * parameter )
         }
         else {
           value3_oled = 1;   
-          int ret_code = report_toPushover (wifi_order_struct.pushtext, wifi_order_struct.priority );  
- 
+          ret_code = report_toPushover (wifi_order_struct.pushtext, wifi_order_struct.priority );  
+          // ok returncode is 0 
+          if (ret_code == 0)  {
+            value3_oled = 1;
+          }
         }
       break;
 
@@ -106,11 +83,8 @@ void task_wifi ( void * parameter )
 
     wifi_disconnect();                // disconnect unti further use
     
-    DEBUGPRINTLN1 ("\t\t\t\t\twifi_task give semaphore");
-    xSemaphoreGive(wifi_semaphore);                           // release wifi semaphore
-    vTaskDelay(100 / portTICK_PERIOD_MS); 
-  }
-  
+
+  return (ret_code);
 }  // end function
 
 
@@ -187,9 +161,14 @@ int setup_wifi(int detail) {
 int wifi_connect( char *ssid, char *pw) {
   bool timeout = false;
   int anz_try = 0;
+
+  DEBUGPRINT2 ("\t\t\t\t\t");  DEBUGPRINT2 (ssid); DEBUGPRINT2 ("/"); DEBUGPRINTLN2 (pw);
+
+  
   WiFi.begin(ssid, pw);
   
   vTaskDelay(300 / portTICK_PERIOD_MS); 
+
   
   while (WiFi.status() != WL_CONNECTED)  { 
     anz_try++;
@@ -228,8 +207,8 @@ void wifi_disconnect () {
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
 
-  DEBUGPRINTLN3 ("\t\t\t\t\tWifi disconnected");
-
+  DEBUGPRINTLN2 ("\t\t\t\t\tWifi disconnected");
+  vTaskDelay(300 / portTICK_PERIOD_MS); 
 }
 
 //-----------------------------------------
@@ -262,7 +241,6 @@ bool getNTPtime(int sec) {
 
   DEBUGPRINTLN2 ("get time");
 
-  {
     uint32_t start = millis();
     do {
       time(&now);
@@ -284,7 +262,6 @@ bool getNTPtime(int sec) {
   return true;
 }
 
-}
 
 // -------------------------------------------------
 

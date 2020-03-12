@@ -174,49 +174,17 @@ void do_athome() {
     if (do_report) {
       DEBUGPRINT1 ("trying to report to cloud, count:  ");   DEBUGPRINT1 (ath_count); DEBUGPRINT1 (" / "); DEBUGPRINTLN1 (ath_count_day); 
        do_report = false;
- // we need to report to the cloud - this is done in the wifi task
- // first we need to se if task is free or busy - we check the tasks semaphore
- 
-        /* See if we can obtain the semaphore.  If the semaphore is not
-        available wait 10 ticks to see if it becomes free. */
-        if( xSemaphoreTake( wifi_semaphore, ( TickType_t ) 100 ) == pdTRUE )    //pdFALSE auch gültig
-        {
-            /* We were able to obtain the semaphore and can now access the
-            shared resource. */
+
          // set up parameter for this job
             wifi_todo = REPORT_CLOUD;
             wifi_order_struct.order = wifi_todo;
             wifi_order_struct.mvcount  = ath_count;
-            vTaskResume( Task1 );
-            /* We have finished accessing the shared resource.  Release the
-            semaphore. 
-            No: the wifi task is freeing it */
-         //   xSemaphoreGive( wifi_semaphore );
-        }
-        else
-        {
-            /* We could not obtain the semaphore and can therefore not access
-            the shared resource safely. */
-           DEBUGPRINTLN1  ("wifi semaphore busy (cloud reporting)");
-            value3_oled = 4;   
-            xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
-            oledsignal = 1;
-            xSemaphoreGive(SemaOledSignal);        
-            vTaskDelay(200 / portTICK_PERIOD_MS);
-
-        }
-    
-          DEBUGPRINTLN1 ("\t\t\t\t\tat_home give wifisemaphore");
-          xSemaphoreGive(wifi_semaphore);                           // release wifi semaphore
- 
-       
-  
-
+            ret = wifi_func();
+            DEBUGPRINT2 ("wifi_func returns: ");   DEBUGPRINTLN2 (ret);
  
   vTaskDelay(200 / portTICK_PERIOD_MS);
 
-  int res =0;
-          if (res == 0) {           // reset count if ok 
+          if (ret == 0) {           // reset count if ok 
             xSemaphoreTake(SemaMovement, portMAX_DELAY);
             movement_count = 0;
             xSemaphoreGive(SemaMovement);

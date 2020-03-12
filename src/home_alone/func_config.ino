@@ -24,11 +24,11 @@
 int loadConfig (const char *filename, Config &config) {
 
 // Initialize SD library
-  const int chipSelect = 4;
+  const int chipSelect = 33;
   int anz_try = 0;
   bool failed = false;
 
-   DEBUGPRINTLN2 ("start load config...");
+   DEBUGPRINT2 ("start load config, filename: ");  DEBUGPRINTLN1  (filename); 
    delay(300);
    
    while (!SD.begin(chipSelect))  { 
@@ -44,23 +44,26 @@ int loadConfig (const char *filename, Config &config) {
          DEBUGPRINT2 ("."); 
         }
   
-
   
   // Open file for reading
-  File file = SD.open(filename);
+  File file = SD.open("/config.json", FILE_READ);
+
+  if (file == 1) Serial.print ("File opened: ");
+  else Serial.print ("File not found: ");
+  Serial.println(filename);
 
 // Allocate a temporary JsonDocument
   // Don't forget to change the capacity to match your requirements.
   // Use arduinojson.org/v6/assistant to compute the capacity.
 
-  StaticJsonDocument<1300> doc;
-
-
+   DynamicJsonDocument doc(1400);
 
  // Deserialize the JSON document
   DeserializationError error = deserializeJson(doc, file);
-  if (error)
-    Serial.println(F("Failed to read file, using default configuration"));
+  if (error) {
+    Serial.print(F("deserializeJson() failed: "));
+    Serial.println(error.c_str());
+}
 
  config.ThingSpeakChannelNo = doc["ThingSpeakChannelNo"]; // 
           
@@ -149,18 +152,20 @@ config.HoursbetweenNoMovementRep =   doc["HoursbetweenNoMovementRep"]; // 30
 
    // Dump config file
 
-
-  
+   
    if (debug_flag) {
        config.MinutesBetweenUploads = UPLOAD_INTERVALL_TEST;   // set for debug and test
        config.TimeOutLeavingSec = STATE_LEAVE_TEST;          // in seconds for test debug
-       config.QuietHoursStart = 21;        // <------------------------
+       config.QuietHoursStart = 22;        // <------------------------
        config.QuietHoursEnd = 7;        // <------------------------
        config.HoursbetweenNoMovementRep = 3;
        config.MorningReportingHour = 11;      // <-------------------------------------
    
        printFile(filename);
       }
+
+  config.MorningReportingHour = 0;
+   config.EveningReportingHour =0;  
 
   /*    
     if (debug_flag_push)            // do this whenever we test important functions

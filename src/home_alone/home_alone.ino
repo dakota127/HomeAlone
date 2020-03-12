@@ -44,7 +44,7 @@
 //---- Input-Output (gpio) related definitions and variables ----
 #define redledPin 27        // choose the pin for the LED
 #define greenledPin 12     // choose the pin for the LED
-#define inputPin 33        // choose the input pin (for PIR sensor)
+#define inputPin 21        // choose the input pin (for PIR sensor)
 #define button_awayPin 14        // choose the input pin  (A)
 #define button_oledPin 15        // choose the input pin  (C)
 #define button_test 32        // choose the input pin  (C)
@@ -204,6 +204,8 @@ void do_night();
 void do_leaving();
 int report_toCloud();
 int loadConfig ();
+int wifi_func();
+void init_Pushover();
 
 //---- This and that -------------------------------
 
@@ -276,7 +278,8 @@ void setup() {
   old_year = 0;
   day_night_old_dayofyear = 0;
   day_night_old_year = 0;
- 
+
+  init_Pushover();
            
   DEBUGPRINTLN2 ("about to start task1");
   vTaskDelay(100 / portTICK_PERIOD_MS);    // start oled task first on core 1
@@ -295,72 +298,26 @@ void setup() {
 
   WiFi.mode(WIFI_STA);          // Wifi mode is station          
   ThingSpeak.begin(client);     // Initialize ThingSpeak
-  
- // --------- start function wifi in a separate task -------------------------------------- 
-// parameters to start a task:
-//  (name of task , Stack size of task , parameter of the task , priority of the task , Task handle to keep track of created task , core )
-//
-  
-  xTaskCreatePinnedToCore (task_wifi, "wifitask", 6000, NULL, TASK_PRIORITY, &Task1, CORE_1);
+
+
+   digitalWrite(inputPin, LOW); 
+   pinMode(inputPin, INPUT);               // declare as input
+ 
 
   vTaskDelay(200 / portTICK_PERIOD_MS);
 
 
  
- // we need to test wifi - this is done in the wifi task
- // first we need to se if task is free or busy - we check the tasks semaphore
 
- 
-        /* See if we can obtain the semaphore.  If the semaphore is not
-        available wait 10 ticks to see if it becomes free. */
-        if( xSemaphoreTake( wifi_semaphore, ( TickType_t ) 10 ) == pdTRUE )
-        {
-            /* We were able to obtain the semaphore and can now access the
-            shared resource. */
          // set up parameter for this job
              wifi_todo = TEST_WIFI;
              wifi_order_struct.order = wifi_todo;
-            vTaskResume( Task1 );
+            ret = wifi_func();
             /* We have finished accessing the shared resource.  Release the
             semaphore. 
             No: the wifi task is freeing it */
-        }
-        else
-        {
-            /* We could not obtain the semaphore and can therefore not access
-            the shared resource safely. */
+    
 
-            DEBUGPRINTLN2 ("wifi semaphore busy");
-            vTaskDelay(200 / portTICK_PERIOD_MS);
-
-        }
-  
-  // we wait for the initial wifi connection to finish, after that we continue with the setup
-
-  bool wifi_not_done = true;
-
-  while (wifi_not_done){
-         /* See if we can obtain the semaphore.  If the semaphore is not
-        available wait 10 ticks to see if it becomes free. */
-        if( xSemaphoreTake( wifi_semaphore, ( TickType_t ) 100 ) == pdTRUE )
-        {
-            /* We were able to obtain the semaphore and can now access the */
-     
-           xSemaphoreGive( wifi_semaphore );
-
-           wifi_not_done = false;
-        }
-        else
-        {
-            /* We could not obtain the semaphore and can therefore not access
-            the shared resource safely. */
-
-            DEBUGPRINTLN2  ("wifi semaphore busy (setup)");
-            vTaskDelay(400 / portTICK_PERIOD_MS);
-
-        }
-
-  }
    
 // create other tasks ------------
 

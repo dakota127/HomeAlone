@@ -21,11 +21,12 @@ const long interval = 1000;           // interval at which to blink (millisecond
 unsigned long currentMillis = millis();
 int greenledState = LOW;             // ledState used to set the LED
 int redledState = LOW;             // ledState used to set the LED
+bool pirState = LOW;
 
 //---- Input-Output (gpio) related definitions and variables ----
 #define redledPin 27        // choose the pin for the LED
 #define greenledPin 12     // choose the pin for the LED
-#define inputPin 33        // choose the input pin (for PIR sensor)
+#define inputPin 21        // choose the input pin (for PIR sensor)
 #define button_awayPin 14        // choose the input pin  (A)
 #define button_oledPin 15        // choose the input pin  (C)
 #define button_test 32        // choose the input pin  (C)
@@ -136,10 +137,23 @@ void loop() {
   }
     int val = digitalRead(inputPin); // read input value
     if (val == HIGH) { // check if the input is HIGH
-      digitalWrite(redledPin, HIGH); 
-    } // turn LED ON
-    else      digitalWrite(redledPin, LOW); // turn LED ON
- 
+      digitalWrite(redledPin, HIGH); // turn LED ON
+   
+      if (pirState == LOW) {
+// we have just turned on
+       Serial.println ("Motion detected!");
+// We only want to print on the output change, not state
+        pirState = HIGH;
+      }
+    } 
+    else {
+      digitalWrite(redledPin, LOW); // turn LED OFF
+      if (pirState == HIGH){
+// we have just turned of
+       Serial.println ("Motion ended!");
+       pirState = LOW;
+      }
+    }
   delay(200);
   
   yield();
