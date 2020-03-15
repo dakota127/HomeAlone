@@ -64,9 +64,8 @@ int wifi_func ()
           value3_oled = 1;   
           ret_code = report_toPushover (wifi_order_struct.pushtext, wifi_order_struct.priority );  
           // ok returncode is 0 
-          if (ret_code == 0)  {
-            value3_oled = 1;
-          }
+          if (ret_code == 0) value3_oled = 1;
+          else  value3_oled = 8;
         }
       break;
 

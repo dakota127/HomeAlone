@@ -87,8 +87,8 @@ void task_display ( void * parameter )
 
 // if another task wants to switch oled on, the oled signal will be set 
     xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
-    if (oledsignal > 0)  update_oled = 1;
-    oledsignal = 0;
+      update_oled = oledsignal;
+      oledsignal = 0;
     xSemaphoreGive(SemaOledSignal);
 
     
@@ -96,7 +96,7 @@ void task_display ( void * parameter )
       DEBUGPRINTLN2("oled_display ON");
       
     // assemble string to be displayed   
-      sprintf( oled_buf , "%d  %d  %d  %c %d", value1_oled, value2_oled, value3_oled, state_display[value4_oled], movement_count);
+      sprintf( oled_buf , "%d  %d  %d  %c %d", value1_oled, value2_oled, value3_oled, state_display[value4_oled], movCount_reportingPeriod);
 
    // Serial.println (oled_buf);
       display.clear();

@@ -56,8 +56,8 @@ void task_clock ( void * parameter )
 // get the movement counts (protected by semaphore
 
         xSemaphoreTake(SemaMovement, portMAX_DELAY);
-        count = movement_count;
-        count_day = movement_count_perday;
+        count = movCount_reportingPeriod;
+        count_day = movCount_day;
         xSemaphoreGive(SemaMovement);
 
 //---------------------------------------------------------------------------------------
@@ -150,42 +150,7 @@ void task_clock ( void * parameter )
 
 
 
-//--------------------------------------------------------------
-int push_msg (String text, int prio){
-  
 
-// ------- report to pushover ----------------------------------
-
-     
-    DEBUGPRINTLN1 ("\t\tclock send Pushover message");
-
-
- // we need to report to the cloud
-
-         // set up parameter for this job
-        wifi_todo = PUSH_MESG;
-        wifi_order_struct.order = wifi_todo;
-        wifi_order_struct.pushtext = text;
-        wifi_order_struct.priority = prio;    
-        ret = wifi_func();
-        DEBUGPRINT2 ("\t\twifi_func returns: ");   DEBUGPRINTLN2 (ret);
-
-
-        value3_oled = 6;   
-        xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
-         oledsignal = 1;
-        xSemaphoreGive(SemaOledSignal);        
-        vTaskDelay(200 / portTICK_PERIOD_MS);
-   
-      
-      vTaskDelay(100 / portTICK_PERIOD_MS);
-
-     if (ret == 0) {           // reset count if ok 
-        DEBUGPRINTLN1 ("\t\tmessage sent ok");
-     }
-// ------- report to pushover ----------------------------------
-     
-}
 
 // end of code
 //---------------------------------------------------

@@ -56,7 +56,6 @@ TaskHandle_t Task1;
 TaskHandle_t Task2;
 TaskHandle_t Task3;
 TaskHandle_t Task4;
-TaskHandle_t Task5;
 
 SemaphoreHandle_t SemaButton;
 SemaphoreHandle_t SemaMovement;
@@ -66,6 +65,7 @@ SemaphoreHandle_t wifi_semaphore = NULL;
 SemaphoreHandle_t clock_1Semaphore;
 SemaphoreHandle_t clock_2Semaphore;
 SemaphoreHandle_t clock_3Semaphore;
+
 static volatile bool clock_tick_1 = false;
 static volatile bool clock_tick_2 = false;
 static volatile bool clock_tick_3 = false;
@@ -103,8 +103,8 @@ enum {
 uint8_t state = ATHOME;              // state variable is global
 
 //---- communication between tasks ----------------
-static volatile unsigned long movement_count = 0;
-static volatile unsigned long movement_count_perday = 0;
+static volatile unsigned long movCount_reportingPeriod = 0;         //  count per reporting period
+static volatile unsigned long movCount_day = 0;                     //  total count movements daytime
 static volatile unsigned long button_awaypressed = 0;
 static volatile unsigned long button_oledpressed = 0;
 static volatile time_t timelastMovement ;
@@ -300,24 +300,17 @@ void setup() {
   ThingSpeak.begin(client);     // Initialize ThingSpeak
 
 
-   digitalWrite(inputPin, LOW); 
-   pinMode(inputPin, INPUT);               // declare as input
+//   digitalWrite(inputPin, LOW); 
+//   pinMode(inputPin, INPUT);               // declare as input
  
 
   vTaskDelay(200 / portTICK_PERIOD_MS);
 
-
- 
-
-         // set up parameter for this job
-             wifi_todo = TEST_WIFI;
-             wifi_order_struct.order = wifi_todo;
-            ret = wifi_func();
-            /* We have finished accessing the shared resource.  Release the
-            semaphore. 
-            No: the wifi task is freeing it */
-    
-
+  // set up parameter for this job       Text Wifi
+  wifi_todo = TEST_WIFI;
+  wifi_order_struct.order = wifi_todo;
+  ret = wifi_func();
+          
    
 // create other tasks ------------
 
@@ -331,7 +324,7 @@ void setup() {
   vTaskDelay(200 / portTICK_PERIOD_MS);
 
    DEBUGPRINTLN2 ("about to start task3");
-   vTaskDelay(100 / portTICK_PERIOD_MS);
+   vTaskDelay(200 / portTICK_PERIOD_MS);
    xTaskCreatePinnedToCore (task_detect, "Movement", 2000, NULL, TASK_PRIORITY, &Task3, CORE_0);                 
 
    vTaskDelay(200 / portTICK_PERIOD_MS);

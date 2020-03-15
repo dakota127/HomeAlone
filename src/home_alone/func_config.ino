@@ -164,8 +164,11 @@ config.HoursbetweenNoMovementRep =   doc["HoursbetweenNoMovementRep"]; // 30
        printFile(filename);
       }
 
-  config.MorningReportingHour = 0;
-   config.EveningReportingHour =0;  
+
+    config.MorningReportingHour = 0;
+    config.EveningReportingHour =0;  
+
+    config.QuietHoursStart = 15;        // <--------remove !!!! ----------------
 
   /*    
     if (debug_flag_push)            // do this whenever we test important functions

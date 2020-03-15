@@ -15,24 +15,31 @@
 
 //----------------------------------------------------------------
 
-
-void test_push(String message, int prio) {
+//--------------------------------------------------------------
+int push_msg (String text, int prio){
   
+// ------- report to pushover ----------------------------------
+
+    DEBUGPRINTLN1 ("\t\tclock send Pushover message");
 
          // set up parameter for this job
-            wifi_todo = PUSH_MESG;
-            wifi_order_struct.order = wifi_todo;
-            wifi_order_struct.pushtext = message;
-            wifi_order_struct.priority = prio;             // 1 is HIGH  
-            DEBUGPRINTLN2 (wifi_order_struct.pushtext);
-            ret = wifi_func();
-            DEBUGPRINT2 ("wifi_func returns: ");   DEBUGPRINTLN2 (ret);
-            /* We have finished accessing the shared resource.  Release the
-            semaphore. */
-            
-            vTaskDelay(200 / portTICK_PERIOD_MS);
-}      
-
+        wifi_todo = PUSH_MESG;
+        wifi_order_struct.order = wifi_todo;
+        wifi_order_struct.pushtext = text;
+        wifi_order_struct.priority = prio;    
+        ret = wifi_func();
+        DEBUGPRINT2 ("\t\twifi_func returns: ");   DEBUGPRINTLN2 (ret);
+        if (ret == 0) {           // reset count if ok 
+         DEBUGPRINTLN1 ("\t\tmessage sent ok");
+        }
+        xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
+         oledsignal = 1;
+        xSemaphoreGive(SemaOledSignal);        
+        
+        vTaskDelay(200 / portTICK_PERIOD_MS);
+// ------- report to pushover ----------------------------------
+     
+}
 
 
 //--------------------------------------------------

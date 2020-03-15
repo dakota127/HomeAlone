@@ -18,12 +18,10 @@ static bool away_first_time = true;                // first_time run through a s
 static bool athome_first_time = true;                // first_time run through a state, bitwise, bit 0 means state 1
 static bool leaving_first_time = true;                // first_time run through a state, bitwise, bit 0 means state 1
 
-int ath_count;
-int ath_count_day;
+int mvcount;
+int mvcount_day;
 bool do_report= false;
 
-
-int mvcount;
 
 time_t now_4;
 static time_t last_time_away_report;
@@ -32,6 +30,7 @@ time_t leaving_start;
 time_t now_3;
 #define WAIT_TO_REPORT 10000
 
+char bufpush[30];
 
 
 int timelastmv;
@@ -44,6 +43,7 @@ int timelastmv;
 void state_machine( void * parameter )
 {
  static bool main_firsttime = true ;
+ 
   for (;;) {
 
     if (main_firsttime) {
@@ -161,8 +161,8 @@ void do_athome() {
 
 // get movement count ----------
        xSemaphoreTake(SemaMovement, portMAX_DELAY);
-       ath_count = movement_count;
-       ath_count_day = movement_count_perday;
+       mvcount = movCount_reportingPeriod;
+       mvcount_day = movCount_day;
        timelastmv = timelastMovement;                 // only needed for test runs
        xSemaphoreGive(SemaMovement);
 
@@ -172,13 +172,13 @@ void do_athome() {
     }
 
     if (do_report) {
-      DEBUGPRINT1 ("trying to report to cloud, count:  ");   DEBUGPRINT1 (ath_count); DEBUGPRINT1 (" / "); DEBUGPRINTLN1 (ath_count_day); 
+      DEBUGPRINT1 ("trying to report to cloud, count:  ");   DEBUGPRINT1 (mvcount); DEBUGPRINT1 (" / "); DEBUGPRINTLN1 (mvcount_day); 
        do_report = false;
 
          // set up parameter for this job
             wifi_todo = REPORT_CLOUD;
             wifi_order_struct.order = wifi_todo;
-            wifi_order_struct.mvcount  = ath_count;
+            wifi_order_struct.mvcount  = mvcount;
             ret = wifi_func();
             DEBUGPRINT2 ("wifi_func returns: ");   DEBUGPRINTLN2 (ret);
  
@@ -186,7 +186,7 @@ void do_athome() {
 
           if (ret == 0) {           // reset count if ok 
             xSemaphoreTake(SemaMovement, portMAX_DELAY);
-            movement_count = 0;
+            movCount_reportingPeriod = 0;
             xSemaphoreGive(SemaMovement);
           }
 
@@ -215,7 +215,7 @@ void do_athome() {
     but = digitalRead(button_test); // read input value
     if (but == LOW) { // check if the input is HIGH
       DEBUGPRINTLN1 ("button test pressed");
-      test_push ("Message: Testbutton", 1);           // use priority 1 HIGH
+      push_msg ("Message: Testbutton", 1);           // use priority 1 HIGH
     }
 
 
@@ -226,9 +226,20 @@ void do_athome() {
    
     if (curr_hour >= config.QuietHoursStart) {
       state= NIGHT;
-      athome_first_time = true;   
-    }
-    
+      athome_first_time = true;  
+           // assemble string to be displayed   
+      xSemaphoreTake(SemaMovement, portMAX_DELAY);
+         mvcount_day = movCount_day;
+         movCount_day = 0;
+      xSemaphoreGive(SemaMovement);
+
+      sprintf( bufpush , " Good Night, Mov during day %d", mvcount_day);
+
+      // push evening message ------------
+      push_msg (bufpush, -1);
+
+    }   
+ // check if quitehours reached -------------------------   
     
     vTaskDelay(500 / portTICK_PERIOD_MS);
 //  DEBUGPRINTLN1 ("do_athome(
@@ -278,7 +289,7 @@ void do_away() {
 
   // check if movement 
    xSemaphoreTake(SemaMovement, portMAX_DELAY);
-   mvcount= movement_count;
+   mvcount= movCount_reportingPeriod;
    xSemaphoreGive(SemaMovement);
    if (mvcount > 0) {
      state = ATHOME;
@@ -327,7 +338,7 @@ void do_leaving() {
     if (( now_3 - leaving_start) > (config.TimeOutLeavingSec) ) {     // ok, we leave this state
      Serial.println ( now_3 - leaving_start);
       xSemaphoreTake(SemaMovement, portMAX_DELAY);
-      movement_count = 0;
+      movCount_reportingPeriod = 0;
       xSemaphoreGive(SemaMovement);
       state = AWAY;
       leaving_first_time = true; 
@@ -363,9 +374,12 @@ void do_night() {
         day_night_old_year = curr_year;   // function returns year since 1900
         
         DEBUGPRINTLN1 ("Good night...");
-        
-        if (debug_flag_push)     test_push  ("Message: begin Quiethours", -1);     // do this if modus is test
-    }
+
+        /*
+        if (debug_flag_push)     
+        test_push  ("Message: begin Quiethours", -1);     // do this if modus is test   
+        */
+ }
 
 
         int but = digitalRead(button_awayPin); // read input value
@@ -402,7 +416,20 @@ void do_night() {
       state= next_state;                      // change state
       night_first_time = true;   
       DEBUGPRINTLN1 ("Good morning...");
-      if (debug_flag_push)     test_push("Message: Morning has broken", -1);     // do this if modus is test
+      // assemble string to be displayed   
+
+       xSemaphoreTake(SemaMovement, portMAX_DELAY);
+         mvcount_day = movCount_day;
+         movCount_day = 0;
+       xSemaphoreGive(SemaMovement);
+
+      
+      sprintf( bufpush , " Good Morning, Mov during night %d", mvcount_day);
+      
+        
+      // push morning message ------------
+      push_msg (bufpush, -1);
+
     }
  
 

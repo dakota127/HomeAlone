@@ -20,11 +20,13 @@ void task_detect ( void * parameter )
   
 
     if (detect_first_time) {
-      DEBUGPRINT3 ("TASK detect - Running on core:");
-      DEBUGPRINTLN3 (xPortGetCoreID());
+      DEBUGPRINT2 ("TASK detect - Running on core:");
+      DEBUGPRINTLN2 (xPortGetCoreID());
       detect_first_time = false;
       timelastMovement = now;                            // Initiate time last movement
        // nothing else to do ....
+       // Pause the task 
+      vTaskDelay(200 / portTICK_PERIOD_MS); 
     }
  
     
@@ -50,12 +52,12 @@ void task_detect ( void * parameter )
         pirState = LOW;
 
         xSemaphoreTake(SemaMovement, portMAX_DELAY);
-        ++movement_count;
-        ++ movement_count_perday;
-        if (movement_count > config.MaxActivityCount) movement_count = config.MaxActivityCount;
+        ++movCount_reportingPeriod;
+        ++ movCount_day;
+        if (movCount_reportingPeriod > config.MaxActivityCount) movCount_reportingPeriod = config.MaxActivityCount;
  
-         count = movement_count;
-         count_day = movement_count_perday;
+         count = movCount_reportingPeriod;
+         count_day = movCount_day;
          timelastMovement = now;
          
          xSemaphoreGive(SemaMovement);
