@@ -20,6 +20,9 @@ int push_msg (String text, int prio){
   
 // ------- report to pushover ----------------------------------
 
+
+     return(0);
+
     DEBUGPRINTLN1 ("\t\tclock send Pushover message");
 
          // set up parameter for this job

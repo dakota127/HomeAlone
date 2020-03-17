@@ -39,7 +39,7 @@ SSD1306Wire display(0x3c, SDA, SCL);   // ADDRESS, SDA, SCL  -  SDA and SCL usua
 
 time_t display_on;
 time_t now_1;
-static volatile int update_oled;
+int update_oled;
 char oled_buf[20];
 
 char state_display[] = {'x', 'H', 'L', 'A', 'N', 'E', '\0'};
@@ -59,7 +59,6 @@ void task_display ( void * parameter )
       static long unsigned last_displaytime;
       static unsigned long lastEntryTime;
       static bool oled_first_time = true ;
-      static bool oled_on = false;
       int count;
       int count_day;
 
@@ -87,7 +86,7 @@ void task_display ( void * parameter )
 
 // if another task wants to switch oled on, the oled signal will be set 
     xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
-      update_oled = oledsignal;
+      if (oledsignal > 0)  update_oled = 1;
       oledsignal = 0;
     xSemaphoreGive(SemaOledSignal);
 
@@ -109,7 +108,6 @@ void task_display ( void * parameter )
       time(&display_on);                  // time at which oled is switched on
       display.displayOn();
       display.display();                  // actually display all of the above
-      oled_on= true;
       update_oled = 0;
     }
 
@@ -117,7 +115,6 @@ void task_display ( void * parameter )
     time(&now_1);
     if (( now_1 - display_on) > config.ScreenTimeOutSeconds ) {
       display.displayOff();     // switch off oled display
-      oled_on = false;
     }
 
   //  read ole pin: presses means: switch display on for a number of seconds -----------

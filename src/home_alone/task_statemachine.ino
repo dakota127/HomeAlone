@@ -30,7 +30,7 @@ time_t leaving_start;
 time_t now_3;
 #define WAIT_TO_REPORT 10000
 
-char bufpush[30];
+char bufpush[40];
 
 
 int timelastmv;
@@ -233,7 +233,7 @@ void do_athome() {
          movCount_day = 0;
       xSemaphoreGive(SemaMovement);
 
-      sprintf( bufpush , " Good Night, Mov during day %d", mvcount_day);
+      sprintf( bufpush , "Good Night, Mov during day %d", mvcount_day);
 
       // push evening message ------------
       push_msg (bufpush, -1);
