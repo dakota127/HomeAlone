@@ -98,7 +98,7 @@ void task_display ( void * parameter )
       DEBUGPRINTLN3(person2string);
       
     // assemble string to be displayed   
-      sprintf( oled_buf , "%d  %d  %d  %c %d", value1_oled, value2_oled, value3_oled, state_display[value4_oled], movCount_reportingPeriod);
+      sprintf( oled_buf , "%d %d %d %c  %d", value1_oled, value2_oled, value3_oled, state_display[value4_oled], movCount_reportingPeriod);
 
    // Serial.println (oled_buf);
       display.clear();
@@ -106,7 +106,7 @@ void task_display ( void * parameter )
       display.setFont(ArialMT_Plain_24);
       display.drawString(0, 0, person2string);
 
-      display.drawString(0,34, oled_buf);
+      display.drawString(0,36, oled_buf);
       
       time(&display_on);                  // time at which oled is switched on
       display.displayOn();
