@@ -41,6 +41,7 @@ time_t display_on;
 time_t now_1;
 int update_oled;
 char oled_buf[20];
+String person2string;
 
 char state_display[] = {'x', 'H', 'L', 'A', 'N', 'E', '\0'};
 
@@ -69,7 +70,7 @@ void task_display ( void * parameter )
       DEBUGPRINT1 ("TASK display - Running on core:");
       DEBUGPRINTLN1 (xPortGetCoreID());
       oled_first_time = false;
-
+ 
        // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
       display.init();
       display.flipScreenVertically();
@@ -82,7 +83,8 @@ void task_display ( void * parameter )
        if (debug_flag > 0) config.ScreenTimeOutSeconds  += 20;     // increase display on time if debug is on 
       // nothing else to do ....
     }  // end first time .......
-    
+
+     person2string = config.PersonName;
 
 // if another task wants to switch oled on, the oled signal will be set 
     xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
@@ -93,6 +95,7 @@ void task_display ( void * parameter )
     
     if (update_oled > 0)  {
       DEBUGPRINTLN2("oled_display ON");
+      DEBUGPRINTLN3(person2string);
       
     // assemble string to be displayed   
       sprintf( oled_buf , "%d  %d  %d  %c %d", value1_oled, value2_oled, value3_oled, state_display[value4_oled], movCount_reportingPeriod);
@@ -101,7 +104,7 @@ void task_display ( void * parameter )
       display.clear();
       display.setTextAlignment(TEXT_ALIGN_LEFT);
       display.setFont(ArialMT_Plain_24);
-      display.drawString(0, 0, "Home Alone");
+      display.drawString(0, 0, person2string);
 
       display.drawString(0,34, oled_buf);
       

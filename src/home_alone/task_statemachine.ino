@@ -51,22 +51,45 @@ void state_machine( void * parameter )
       DEBUGPRINTLN2 (xPortGetCoreID());
       main_firsttime = false;
       state = ATHOME;                   // initial state of state machine
-
+      // set this to prevent reporting if boot during the day. We want reporting only the next day
+      if  (curr_hour >= config.MorningReportingHour)   done_morningreporting = true;
+      if  (curr_hour >= config.EveningReportingHour)   done_eveningreporting = true;
+        DEBUGPRINT2 ("M-rep: ");  DEBUGPRINT2 (done_morningreporting);  DEBUGPRINT2 ("  E-rep: ");  DEBUGPRINTLN2 (done_eveningreporting); 
+      
     }
 
 // stuff we do irrelevant of state --------
 //-----------------------------------------
+
+// is_newday is set as soon as a new day has begun
+// it will stay on for one single interation of the loop
+    is_newday = false;
+
+// get current date info --------
     time(&now);
     localtime_r (&now, &timeinfo);
-  
+
     curr_hour = timeinfo.tm_hour;
     curr_dayofyear = timeinfo.tm_yday;
     curr_year = timeinfo.tm_year -100;   // function returns year since 1900
 
+// check if new day has arrived 
+    if ((old_year == curr_year) and (old_dayofyear == curr_dayofyear)) {
+        DEBUGPRINTLN3 ("No day and no year change");                        // value 2 für debug
+    }
+    else {
+      DEBUGPRINTLN2 ("a new day has begun");   
+      old_year = curr_year;
+      old_dayofyear = curr_dayofyear;
+      is_newday = true;
+      done_morningreporting = false;      // reset this for the new day that has just started
+      done_eveningreporting = false;      // reset this for the new day
+    }
+  
 
     xSemaphoreTake(SemaMovement, portMAX_DELAY);
-        timelastmv = timelastMovement;
-     xSemaphoreGive(SemaMovement);
+      timelastmv = timelastMovement;
+    xSemaphoreGive(SemaMovement);
          
 
     if ((now - timelastmv) >= (config.HoursbetweenNoMovementRep * 3600)) {
@@ -74,7 +97,7 @@ void state_machine( void * parameter )
           // assemble string to be displayed   
         sprintf( buf , "Watch out: no movement in last period");
         
-      // push morning message ------------
+      // push alert message ------------
           push_msg (buf,1);             // High priority message       
 
      xSemaphoreTake(SemaMovement, portMAX_DELAY);
@@ -85,7 +108,6 @@ void state_machine( void * parameter )
 
 
 
- 
 
 // state machine implementation starts here
 // switch according to state variable
@@ -103,11 +125,11 @@ void state_machine( void * parameter )
     case AWAY:
       do_away();
       break;
-  
+ /* 
     case NIGHT:
       do_night();
       break;
-
+*/
     default:
       DEBUGPRINTLN0 ("case main zu default, error!");
       vTaskDelay(200 / portTICK_PERIOD_MS);
@@ -130,6 +152,7 @@ void state_machine( void * parameter )
 //---------------------------------------------------------------
 void do_athome() {
 
+ 
 
     if (athome_first_time) {
       DEBUGPRINT2("STATE athome - Running on core:");
@@ -215,31 +238,43 @@ void do_athome() {
     but = digitalRead(button_test); // read input value
     if (but == LOW) { // check if the input is HIGH
       DEBUGPRINTLN1 ("button test pressed");
-      push_msg ("Message: Testbutton", 1);           // use priority 1 HIGH
+      push_msg ("Testmeldung", 1);           // use priority 1 HIGH
     }
 
 
+   if (config.MorningReportingHour > 0) {
+      
+    if  ((curr_hour >= config.MorningReportingHour) and (done_morningreporting == false)) {
 
-// check if quitehours reached -------------------------
-// change state to night if this happened---------------
-  
-   
-    if (curr_hour >= config.QuietHoursStart) {
-      state= NIGHT;
-      athome_first_time = true;  
+        DEBUGPRINTLN2 ("Morning Reporting");     
            // assemble string to be displayed   
-      xSemaphoreTake(SemaMovement, portMAX_DELAY);
-         mvcount_day = movCount_day;
-         movCount_day = 0;
-      xSemaphoreGive(SemaMovement);
+        sprintf( buf , " Good Morning, Mov: %d /  %d", mvcount, mvcount_day);
+        
+      // push morning message ------------
+          push_msg (buf, -1);
+          done_morningreporting = true;
+    }
+   }
+  
+    
+// end handling Ev rening eporting
 
-      sprintf( bufpush , "Good Night, Mov during day %d", mvcount_day);
+   if (config.EveningReportingHour > 0) {
+      
+    if  ((curr_hour >= config.EveningReportingHour) and (done_eveningreporting == false)) {
 
+        DEBUGPRINTLN2 ("Evening Reporting");     
+           // assemble string to be displayed   
+        sprintf( buf , " Good Night, Mov: %d /  %d", mvcount, mvcount_day);
+        
       // push evening message ------------
-      push_msg (bufpush, -1);
-
-    }   
- // check if quitehours reached -------------------------   
+          push_msg (buf, -1);
+          done_eveningreporting = true;
+    }
+   }
+  
+    
+// end handling Morning reporting
     
     vTaskDelay(500 / portTICK_PERIOD_MS);
 //  DEBUGPRINTLN1 ("do_athome(
@@ -278,11 +313,12 @@ void do_away() {
         }
 // ------- report to cloud ----------------------------------
 
+/*
     if (curr_hour >= config.QuietHoursStart) {
       state= NIGHT;
       away_first_time = true;   
     }
-
+*/
     
    vTaskDelay(200 / portTICK_PERIOD_MS);
    
@@ -370,8 +406,7 @@ void do_night() {
         xSemaphoreGive(SemaOledSignal);
         time(&last_time_away_report);
 
-        day_night_old_dayofyear = curr_dayofyear;       // keep beginning of night
-        day_night_old_year = curr_year;   // function returns year since 1900
+ 
         
         DEBUGPRINTLN1 ("Good night...");
 
@@ -405,32 +440,6 @@ void do_night() {
 //------------------------------------------------
 
     
-  DEBUGPRINT3 (curr_dayofyear);  DEBUGPRINT3 (" / "); DEBUGPRINTLN3 (day_night_old_dayofyear); 
-  DEBUGPRINT3 (curr_year);  DEBUGPRINT3 (" / ");  DEBUGPRINTLN3 (day_night_old_year); 
-  DEBUGPRINT3 (curr_hour);  DEBUGPRINT3 (" / ");  DEBUGPRINTLN3 (config.QuietHoursEnd); 
-
-   if ((  day_night_old_year == curr_year) and (day_night_old_dayofyear == curr_dayofyear)) {
-        DEBUGPRINTLN3 ("No day and no year change");                        // value 2 für debug
-   }
-   else if (curr_hour >= config.QuietHoursEnd) {
-      state= next_state;                      // change state
-      night_first_time = true;   
-      DEBUGPRINTLN1 ("Good morning...");
-      // assemble string to be displayed   
-
-       xSemaphoreTake(SemaMovement, portMAX_DELAY);
-         mvcount_day = movCount_day;
-         movCount_day = 0;
-       xSemaphoreGive(SemaMovement);
-
-      
-      sprintf( bufpush , " Good Morning, Mov during night %d", mvcount_day);
-      
-        
-      // push morning message ------------
-      push_msg (bufpush, -1);
-
-    }
  
 
 }

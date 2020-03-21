@@ -24,18 +24,19 @@
 #define ESP32
 
 #include <time.h>
-#include <WiFi.h>
+#include <WiFi.h>                 // used for thingspeak
+#include <WiFiClientSecure.h>     // used for pushover
 #include "ThingSpeak.h"
 #include <ArduinoJson.h>
 #include <SD.h>
 
 
 // degugging stuff ------------------------------
-#define DEBUGLEVEL 0        // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
+#define DEBUGLEVEL 2        // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
 #include <DebugUtils.h>     // Library von Adreas Spiess
 
 #define DEBUGPUSH true        // für Debug push messages, set to 1 for messages of important events
-#define  REPORTING_TRIGGERLEVEL  40              // to be added to config File later <----- 
+
 
 
 //--- helper macros ---------- number of items in an array
@@ -64,12 +65,9 @@ SemaphoreHandle_t wifi_semaphore = NULL;
 
 SemaphoreHandle_t clock_1Semaphore;
 SemaphoreHandle_t clock_2Semaphore;
-SemaphoreHandle_t clock_3Semaphore;
 
 static volatile bool clock_tick_1 = false;
 static volatile bool clock_tick_2 = false;
-static volatile bool clock_tick_3 = false;
-
 
 #define CORE_0  0                   // core to run on
 #define CORE_1  1
@@ -118,13 +116,6 @@ static volatile int value4_oled = 5 ;             // 1 = at home, 2= leaving, 3:
 static volatile int value5_oled = 0 ;             // movement count
 int oledsignal = 1;
 
-
-
-
-//---- Network related definitions and variables ----
-WiFiClient  client;
-
-
 static volatile int credential_to_use = 0;        // 0: try all credentials
 #define WIFI_DETAILS 0
 
@@ -133,14 +124,15 @@ struct Config {               /// config struct
   int ThingSpeakChannelNo;
   int ThingSpeakFieldNo;
   char ThingSpeakWriteAPIKey[20];
+  char Title [20];
   char PersonName [20];
   int MinutesBetweenUploads;
   char wlanssid_1[12];
   char wlanpw_1[15];
   char wlanssid_2[12];
   char wlanpw_2[15];  
-  char Timezone_Info[60];     // enter your time zone (https://remotemonitoringsystems.ca/time-zone-abbreviations.php)
   char NTPPool[20];
+  char Timezone_Info[60];     // enter your time zone (https://remotemonitoringsystems.ca/time-zone-abbreviations.php)
   char Email_1[20];
   char Email_2[20];
   int TimeOutLeavingSec;
@@ -173,20 +165,21 @@ time_t now;
 long unsigned lastNTPtime;
 unsigned long lastEntryTime;
 
-static volatile int day_night_old_dayofyear;
-static volatile int day_night_old_year;
-static volatile int old_dayofyear;
-static volatile int old_year;
-static volatile int old_hour;
 
+
+// time-date stuff
 static volatile int curr_hour;
 static volatile int curr_dayofyear;
 static volatile int curr_year;   // function returns year since 
+static volatile int old_hour;
+static volatile int old_dayofyear;
+static volatile int old_year;   // function returns year since 
+static bool done_morningreporting = false;           // have we already done it at the specified hour ?
+static bool done_eveningreporting = false;
+static volatile bool is_newday = false;
 
-
-//keep this ....
-//#define ALARM_DURATION_1  340000  // (12'000 sind 2 Min) 34'000 sind ca. 6 Min)
-//#define ALARM_DURATION_2  120000  // (12'000 sind 2 Min) 34'000 sind ca. 6 Min)
+WiFiClientSecure client;
+WiFiClient client2;
 
 
 //---- Function Prototypes -----------------------
@@ -205,7 +198,6 @@ void do_leaving();
 int report_toCloud();
 int loadConfig ();
 int wifi_func();
-void init_Pushover();
 
 //---- This and that -------------------------------
 
@@ -258,12 +250,11 @@ void setup() {
   
   clock_1Semaphore = xSemaphoreCreateMutex();
   clock_2Semaphore = xSemaphoreCreateMutex();
-  clock_3Semaphore = xSemaphoreCreateMutex();
   
   Serial.begin(115200);
   delay(2000);   //wait so we see everything
   display_Running_Sketch();
-
+  WiFi.mode(WIFI_STA);   
   if (DEBUGLEVEL > 0) {
     debug_flag = true;                          // some functions need this
     Serial.println("----- debug on ---------");
@@ -273,13 +264,6 @@ void setup() {
 
   digitalWrite(redledPin, LOW); // turn LED OFF
 
-// timestuff init --------------------
-  old_dayofyear  = 0;
-  old_year = 0;
-  day_night_old_dayofyear = 0;
-  day_night_old_year = 0;
-
-  init_Pushover();
            
   DEBUGPRINTLN2 ("about to start task1");
   vTaskDelay(100 / portTICK_PERIOD_MS);    // start oled task first on core 1
@@ -299,22 +283,21 @@ void setup() {
   WiFi.mode(WIFI_STA);          // Wifi mode is station          
   ThingSpeak.begin(client);     // Initialize ThingSpeak
 
-
-//   digitalWrite(inputPin, LOW); 
-//   pinMode(inputPin, INPUT);               // declare as input
- 
-
   vTaskDelay(200 / portTICK_PERIOD_MS);
 
   // set up parameter for this job       Text Wifi
   wifi_todo = TEST_WIFI;
   wifi_order_struct.order = wifi_todo;
   ret = wifi_func();
-          
+
+// init time related stuff
+  curr_hour = timeinfo.tm_hour;
+  curr_dayofyear = timeinfo.tm_yday;
+  curr_year = timeinfo.tm_year -100;   // function returns year since 1900
+  old_dayofyear = curr_dayofyear;
+  old_year = curr_year  ;   // function returns year since 1900          
    
 // create other tasks ------------
-
-
 
   DEBUGPRINTLN2 ("about to start task2");             // clock 
 //  task can only be started after time is available...
@@ -333,7 +316,7 @@ void setup() {
    vTaskDelay(100 / portTICK_PERIOD_MS);
 
 // Tast state machine  - the main loop
-   xTaskCreatePinnedToCore ( state_machine, "STM", 6000, NULL, TASK_PRIORITY, &Task4, CORE_1);
+   xTaskCreatePinnedToCore ( state_machine, "STM", 10000, NULL, TASK_PRIORITY, &Task4, CORE_1);
 
    vTaskDelay(200 / portTICK_PERIOD_MS);
 
@@ -344,8 +327,6 @@ void setup() {
 
   vTaskDelete(NULL);                // delete this initial task
 }
-
-
 
 
 //----------------------------------------------------

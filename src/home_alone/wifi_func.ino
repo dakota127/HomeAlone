@@ -6,16 +6,19 @@
 * Project website http://projects.descan.com/projekt7.html
 * 
 //---------------------------------------------------------------
-// this function runs as a separate task - it handles wifi if so requested
+/
 // it does its job then suspends itself 
 // if takes the wifi_semaphore semaphore while working
 //---------------------------------------------------------------
 
 */
+
 int order;
 int ret_code;
 
 
+//  wifi function ---------------------------------------
+//--------------------------------------------------------
 int wifi_func ()
 {
 
@@ -47,8 +50,9 @@ int wifi_func ()
         }
         else {              // wifi ok
           value2_oled = 1;   
-          ret_code = report_toCloud(wifi_order_struct.mvcount)  ; 
-           if (ret_code > 0 ) value2_oled = 5;   
+          ret_code = report_toCloud (wifi_order_struct.mvcount)  ;    // report to thingspeak
+          Serial.print ("report_toCloud: "); Serial.println (ret_code);
+           if (ret_code != 0 ) value2_oled = 5;   
         }        
           break;
 
@@ -204,7 +208,7 @@ void wifi_disconnect () {
 
     //disconnect WiFi as it's no longer needed
   WiFi.disconnect(true);
-  WiFi.mode(WIFI_OFF);
+//  WiFi.mode(WIFI_OFF);
 
   DEBUGPRINTLN2 ("\t\t\t\t\tWifi disconnected");
   vTaskDelay(300 / portTICK_PERIOD_MS); 

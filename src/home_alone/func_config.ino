@@ -72,9 +72,13 @@ config.ThingSpeakFieldNo = doc["ThingSpeakFieldNo"]; // 1
  strlcpy(config.ThingSpeakWriteAPIKey,                  // <- destination
           doc["ThingSpeakWriteAPIKey"] | "example.ch",  // <- source
           sizeof(config.ThingSpeakWriteAPIKey));         // <- destination's capacity
+
+ strlcpy(config.Title,                  // <- destination
+          doc["Title"] | "Movements ",  // <- source
+          sizeof(config.Title));         // <- destination's capacity          
           
  strlcpy(config.PersonName,                  // <- destination
-          doc["PersonName"] | "example.ch",  // <- source
+          doc["PersonName"] | "Aunt Daisy",  // <- source
           sizeof(config.PersonName));         // <- destination's capacity
           
  strlcpy(config.PushoverUserkey,                  // <- destination
@@ -159,16 +163,12 @@ config.HoursbetweenNoMovementRep =   doc["HoursbetweenNoMovementRep"]; // 30
        config.QuietHoursStart = 22;        // <------------------------
        config.QuietHoursEnd = 7;        // <------------------------
        config.HoursbetweenNoMovementRep = 3;
-       config.MorningReportingHour = 11;      // <-------------------------------------
+       config.EveningReportingHour = 18;
    
        printFile(filename);
       }
 
-
-    config.MorningReportingHour = 0;
-    config.EveningReportingHour =0;  
-
-//    config.QuietHoursStart = 15;        // <--------remove !!!! ----------------
+//    config.EveningReportingHour = 19;
 
   /*    
     if (debug_flag_push)            // do this whenever we test important functions
@@ -209,18 +209,20 @@ void printConfig() {
 
  Serial.println ("Values: ");
   Serial.println (config.ThingSpeakChannelNo);
+  Serial.println (config.ThingSpeakFieldNo);
   Serial.println (config.ThingSpeakWriteAPIKey);
+  Serial.println (config.Title);
   Serial.println (config.PersonName);
   Serial.println (config.MinutesBetweenUploads);
-  Serial.println (config.PersonName);
   Serial.println (config.wlanssid_1);
   Serial.println (config.wlanpw_1);
   Serial.println (config.wlanssid_2);
   Serial.println (config.wlanpw_2);
+   Serial.println (config.NTPPool);
+  Serial.println (config.Timezone_Info);
   Serial.println (config.Email_1);
   Serial.println (config.Email_2);
- Serial.println (config.NTPPool);
- Serial.println (config.Timezone_Info);
+
  Serial.println (config.TimeOutLeavingSec); 
  Serial.println (config.MaxActivityCount);
  Serial.println (config.BeepOnMovement); 
@@ -235,12 +237,13 @@ void printConfig() {
   Serial.println (config.EveningReportingHour);
   Serial.println (config.MorningReportingHour);
   Serial.println (config.ReportingThreshold);
-
+  Serial.println ("--------------------");
   
-  
+  Serial.println ("credentials:");
   for (int i=0; i < 4; i++) {
-  Serial.println(credentials[i]);
+   Serial.println(credentials[i]);
   }
+  Serial.println ("--------------------");
 }
 
 // end of code ------------------------------
