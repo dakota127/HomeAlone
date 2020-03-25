@@ -34,7 +34,7 @@
 
 
 // degugging stuff ------------------------------
-#define DEBUGLEVEL 1      // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
+#define DEBUGLEVEL 0      // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
 #include <DebugUtils.h>     // Library von Adreas Spiess
 
 #define DEBUGPUSH true        // für Debug push messages, set to 1 for messages of important events
