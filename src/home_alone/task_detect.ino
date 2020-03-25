@@ -52,17 +52,15 @@ void task_detect ( void * parameter )
         pirState = LOW;
 
         xSemaphoreTake(SemaMovement, portMAX_DELAY);
-        ++movCount_reportingPeriod;
-        ++ movCount_day;
-        if (movCount_reportingPeriod > config.MaxActivityCount) movCount_reportingPeriod = config.MaxActivityCount;
- 
-         count = movCount_reportingPeriod;
-         count_day = movCount_day;
+        ++movCount_reportingPeriod_cloud;
+        ++movCount_reportingPeriod_push;
+        if (movCount_reportingPeriod_cloud > config.MaxActivityCount) movCount_reportingPeriod_cloud = config.MaxActivityCount;
+         count = movCount_reportingPeriod_cloud;
          timelastMovement = now;
          
          xSemaphoreGive(SemaMovement);
 
-        DEBUGPRINT2 ("count now: ");  DEBUGPRINT2 (count); DEBUGPRINT2 (" / ");  DEBUGPRINT2 (count_day); DEBUGPRINT2 (" - ");  DEBUGPRINTLN2 (timelastMovement);
+        DEBUGPRINT2 ("count now: ");  DEBUGPRINT2 (count); DEBUGPRINT2 (" / ");  DEBUGPRINT2 (movCount_reportingPeriod_cloud); DEBUGPRINT2 (" - ");  DEBUGPRINTLN2 (timelastMovement);
 
       }
     }

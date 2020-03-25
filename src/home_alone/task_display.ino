@@ -98,7 +98,7 @@ void task_display ( void * parameter )
       DEBUGPRINTLN3(person2string);
       
     // assemble string to be displayed   
-      sprintf( oled_buf , "%d %d %d %c  %d", value1_oled, value2_oled, value3_oled, state_display[value4_oled], movCount_reportingPeriod);
+      sprintf( oled_buf , "%d %d %d %c  %d", value1_oled, value2_oled, value3_oled, state_display[value4_oled], movCount_reportingPeriod_cloud);
 
    // Serial.println (oled_buf);
       display.clear();

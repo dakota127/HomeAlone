@@ -6,9 +6,9 @@
 * Project website http://projects.descan.com/projekt7.html
 * 
 //---------------------------------------------------------------
-/
-// it does its job then suspends itself 
-// if takes the wifi_semaphore semaphore while working
+// conncetion issues see
+// https://github.com/espressif/arduino-esp32/issues/1212
+//
 //---------------------------------------------------------------
 
 */
@@ -27,7 +27,7 @@ int wifi_func ()
 
 //------------------      
       case TEST_WIFI:
-        DEBUGPRINTLN3 ("\t\t\t\t\twifi_func doing setup wifi");
+        DEBUGPRINTLN3 ("\t\t\t\t\twifi_func: setup wifi");
         ret_code = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
         if (ret_code > 5) {
             Serial.println("\t\t\t\t\terror-error-error - no wifi 1"); 
@@ -41,7 +41,7 @@ int wifi_func ()
 
 //------------------
       case REPORT_CLOUD:
-        DEBUGPRINTLN1 ("\t\t\t\t\twifi_func doing report thingspeak");
+        DEBUGPRINTLN1 ("\t\t\t\t\twifi_func: report thingspeak");
 
         ret_code = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
         if (ret_code > 5) {
@@ -58,7 +58,7 @@ int wifi_func ()
 
 //------------------
       case PUSH_MESG:
-        DEBUGPRINT1 ("\t\t\t\t\twifi_func doing push message: ");   DEBUGPRINTLN1 ( wifi_order_struct.pushtext);
+        DEBUGPRINT1 ("\t\t\t\t\twifi_func: push message: ");   DEBUGPRINTLN1 ( wifi_order_struct.pushtext);
         ret_code = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
         if (ret_code > 5) {
           Serial.println("\t\t\t\t\terror-error-error - no wifi 3"); 
@@ -85,9 +85,10 @@ int wifi_func ()
      xSemaphoreGive(SemaOledSignal);
 
     wifi_disconnect();                // disconnect unti further use
-    
 
-  return (ret_code);
+  return (ret_code);                  // wifi_func returns.....
+
+  
 }  // end function
 
 
@@ -100,7 +101,7 @@ int wifi_func ()
 int setup_wifi(int detail) {
   int anz_try = 0;
   bool connection = false;
-  bool timeout = false;
+
   int anz_credentials =  (NUMITEMS (credentials))/2;
   
   static int use_this_cred = 0;                   
@@ -119,9 +120,8 @@ int setup_wifi(int detail) {
   if (use_all_credentials == true) {
   
     while ((connection == false) &  ((anz_credentials - i) >0)) {
-      DEBUGPRINT2 ("\t\t\t\t\tTry to connect1:");  DEBUGPRINT2 (credentials[(2*i)]); DEBUGPRINT2 ("/"); DEBUGPRINTLN2 (credentials[(2*i)+1]); 
-      timeout = false;
-
+      DEBUGPRINT2 ("\t\t\t\t\tTry to connect_1:");  DEBUGPRINT2 (credentials[(2*i)]); DEBUGPRINT2 ("/"); DEBUGPRINTLN2 (credentials[(2*i)+1]); 
+  
       ret = wifi_connect (credentials[(2*i)], credentials[(2*i)+1]);
       if (ret == 0) {
         connection = true;
@@ -133,11 +133,11 @@ int setup_wifi(int detail) {
          
   }
   
-  // use the credentials that were used at the begin of the sketch
+  // use the credentials that was used and worked during setup() 
   else {
-    DEBUGPRINT2 ("\t\t\t\t\tTry to connect2:");  DEBUGPRINT2 (credentials[(2*use_this_cred)]); DEBUGPRINT2 ("/"); DEBUGPRINTLN2 (credentials[(2*use_this_cred)+1]); ; 
+    DEBUGPRINT2 ("\t\t\t\t\tTry to connect_2:");  DEBUGPRINT2 (credentials[(2*use_this_cred)]); DEBUGPRINT2 ("/"); DEBUGPRINTLN2 (credentials[(2*use_this_cred)+1]); ; 
  
-    ret = wifi_connect(credentials[(2*use_this_cred)], credentials[(2*use_this_cred)+1]);
+    ret = wifi_connect (credentials[(2*use_this_cred)], credentials[(2*use_this_cred)+1]);
 
     if (ret == 0) connection = true;
        
@@ -145,7 +145,7 @@ int setup_wifi(int detail) {
 
    if (connection)   {
    
-      DEBUGPRINT1 ("\t\t\t\t\tConnection ok  ");
+      DEBUGPRINT1 ("\t\t\t\t\tConnection ok  \n");
       DEBUGPRINTLN2 (use_this_cred);
  
       get_time();
@@ -155,14 +155,14 @@ int setup_wifi(int detail) {
 
     else  {               
 
-      return (9);                     // return retcode and credentialnumber
+      return (9);                     // return retcode 
     }
 }
      
     
 //--------------------------------------------------
-int wifi_connect( char *ssid, char *pw) {
-  bool timeout = false;
+int wifi_connect_old( char *ssid, char *pw) {
+  bool have_connection = true;
   int anz_try = 0;
 
   DEBUGPRINT2 ("\t\t\t\t\t");  DEBUGPRINT2 (ssid); DEBUGPRINT2 ("/"); DEBUGPRINTLN2 (pw);
@@ -177,17 +177,44 @@ int wifi_connect( char *ssid, char *pw) {
     anz_try++;
     if (anz_try > 45)   {// wenn noch Eintrag im Router, dann dauert es
         DEBUGPRINTLN1 ("\t\t\t\t\tno connection");
-        timeout= true;
+        have_connection= false;
         anz_try = 0;
         break; 
     }
-    vTaskDelay(300 / portTICK_PERIOD_MS); 
+    vTaskDelay(800 / portTICK_PERIOD_MS); 
     DEBUGPRINT3 ("."); 
   }
-  if (!timeout) return (0);
+  if (have_connection) return (0);
   else return(9); 
 }
 
+//--------------------------------------------------
+int wifi_connect( char *ssid, char *pw) {
+  bool have_connection = true;
+  int anz_try = 20;
+
+  DEBUGPRINT2 ("\t\t\t\t\t");  DEBUGPRINT2 (ssid); DEBUGPRINT2 ("/"); DEBUGPRINTLN2 (pw);
+
+  
+  WiFi.begin(ssid, pw);
+  
+  vTaskDelay(300 / portTICK_PERIOD_MS); 
+
+  
+    wifiStatus = WiFi.status() == WL_CONNECTED;
+    while ((anz_try > 0) && (!wifiStatus))
+    {
+        wifiClear();
+        WiFi.begin(ssid, pw);
+        vTaskDelay(5000 / portTICK_PERIOD_MS); 
+        wifiStatus = WiFi.status() == WL_CONNECTED;
+        anz_try-- ;
+    }
+    Serial.println("");
+    
+  if (wifiStatus) return (0);
+  else return(9); 
+}
 
 //--------------------------------------------------
 void wifi_details()
@@ -205,14 +232,37 @@ void wifi_details()
 
 //--------------------------------------------------
 void wifi_disconnect () {
-
-    //disconnect WiFi as it's no longer needed
+// Name : wifi_disconnect
+// Purpose : disconnects from the network and switches off the radio. sets wifiStatus to false.
+// Argument(s) : void
+// Returns : void
+//disconnect WiFi as it's no longer needed
+    
   WiFi.disconnect(true);
-//  WiFi.mode(WIFI_OFF);
-
+  WiFi.mode(WIFI_OFF);
+  wifiStatus = false;
   DEBUGPRINTLN2 ("\t\t\t\t\tWifi disconnected");
   vTaskDelay(300 / portTICK_PERIOD_MS); 
 }
+
+
+//--------------------------------------------------------------------------------------------------
+// Function Details
+//--------------------------------------------------------------------------------------------------
+// Name : wifiClear
+// Purpose : clears all wifi settings before connecting. must be run before every wifiConnect
+// Argument(s) : void
+// Returns : void
+
+void wifiClear()
+{
+    Serial.println ("wifiClear()");
+    WiFi.mode(WIFI_STA);
+    WiFi.disconnect();
+    wifiStatus = WiFi.status() == WL_CONNECTED;
+    delay(100);
+}
+//--------------------------------------------------------------------------------------------------
 
 //-----------------------------------------
 int get_time() {    
@@ -230,7 +280,7 @@ int get_time() {
           vTaskDelay(300 / portTICK_PERIOD_MS); 
           ESP.restart();
         }
-    if (debug_flag)  showTime(timeinfo); 
+  //  if (debug_flag)  showTime(timeinfo); 
     lastNTPtime = time(&now);
     lastEntryTime = millis();
 
@@ -254,12 +304,6 @@ bool getNTPtime(int sec) {
     
     if (timeinfo.tm_year <= (2016 - 1900)) return false;  // the NTP call was not successful
     DEBUGPRINT2 ("now ");  DEBUGPRINTLN2 (now);
-    char time_output[30];
-    strftime(time_output, 30, "%a  %d-%m-%y %T", localtime(&now));
-    if (debug_flag) {
-      Serial.println(time_output);
-      Serial.println();
-    }
 
                                             
   return true;
@@ -297,6 +341,7 @@ void printLocalTime()
     Serial.println("Failed to obtain time");
     return;
   }
+  Serial.print ("Local time: ");
   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 }
 //    end of code --------------------------------------------

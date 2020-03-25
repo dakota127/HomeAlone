@@ -29,10 +29,12 @@
 #include "ThingSpeak.h"
 #include <ArduinoJson.h>
 #include <SD.h>
+//  siehe beispiele https://github.com/espressif/arduino-esp32/issues/449
+#include <rom/rtc.h>
 
 
 // degugging stuff ------------------------------
-#define DEBUGLEVEL 2        // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
+#define DEBUGLEVEL 1      // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
 #include <DebugUtils.h>     // Library von Adreas Spiess
 
 #define DEBUGPUSH true        // für Debug push messages, set to 1 for messages of important events
@@ -90,6 +92,8 @@ struct wifi_struct {               /// wifi struct
 
 // static volatile wifi_struct  wifi_order_struct;
 
+bool wifiStatus;
+
 //---- State Machine related definitions and variables ----
 enum {
     NIGHT,                                      // finite state machins states
@@ -101,8 +105,9 @@ enum {
 uint8_t state = ATHOME;              // state variable is global
 
 //---- communication between tasks ----------------
-static volatile unsigned long movCount_reportingPeriod = 0;         //  count per reporting period
-static volatile unsigned long movCount_day = 0;                     //  total count movements daytime
+static volatile unsigned long movCount_reportingPeriod_cloud = 0;         //  count per reporting period
+static volatile unsigned long movCount_reportingPeriod_push = 0;         //  count per reporting period
+//static volatile unsigned long movCount_day = 0;                     //  total count movements daytime
 static volatile unsigned long button_awaypressed = 0;
 static volatile unsigned long button_oledpressed = 0;
 static volatile time_t timelastMovement ;
@@ -137,9 +142,6 @@ struct Config {               /// config struct
   char Email_2[20];
   int TimeOutLeavingSec;
   int MaxActivityCount;
-  int BeepOnMovement;
-  int QuietHoursStart;
-  int QuietHoursEnd;
   int ScreenTimeOutSeconds;
   char PushoverUserkey[32];
   char PushoverToken[32];
@@ -147,7 +149,6 @@ struct Config {               /// config struct
   int HoursbetweenNoMovementRep;
   int EveningReportingHour;
   int MorningReportingHour;
-  int ReportingThreshold;
  
 };
 char *credentials[] = { "", "", "", "" };
@@ -165,7 +166,10 @@ time_t now;
 long unsigned lastNTPtime;
 unsigned long lastEntryTime;
 
-
+//boot info 
+char time_lastreset[30];
+int   lastResetreason;
+char  reset_reason[30];
 
 // time-date stuff
 static volatile int curr_hour;
@@ -254,6 +258,16 @@ void setup() {
   Serial.begin(115200);
   delay(2000);   //wait so we see everything
   display_Running_Sketch();
+  
+  Serial.print ("CPU0 reset reason: ");
+  store_reset_reason(rtc_get_reset_reason(0));
+  Serial.println (reset_reason);
+  lastResetreason = rtc_get_reset_reason(0);
+  
+  Serial.print ("CPU1 reset reason: ");
+  store_reset_reason(rtc_get_reset_reason(1));
+  Serial.println (reset_reason);
+  
   WiFi.mode(WIFI_STA);   
   if (DEBUGLEVEL > 0) {
     debug_flag = true;                          // some functions need this
@@ -296,7 +310,14 @@ void setup() {
   curr_year = timeinfo.tm_year -100;   // function returns year since 1900
   old_dayofyear = curr_dayofyear;
   old_year = curr_year  ;   // function returns year since 1900          
-   
+
+  
+  strftime(time_lastreset, 30, "%a %d.%m.%y %T", localtime(&now));
+  if (debug_flag) {
+    Serial.println(""); 
+    Serial.print ("Boot Time: ");
+    Serial.println(time_lastreset); 
+  }  
 // create other tasks ------------
 
   DEBUGPRINTLN2 ("about to start task2");             // clock 
@@ -316,7 +337,7 @@ void setup() {
    vTaskDelay(100 / portTICK_PERIOD_MS);
 
 // Tast state machine  - the main loop
-   xTaskCreatePinnedToCore ( state_machine, "STM", 10000, NULL, TASK_PRIORITY, &Task4, CORE_1);
+   xTaskCreatePinnedToCore ( state_machine, "STM", 11000, NULL, TASK_PRIORITY, &Task4, CORE_1);
 
    vTaskDelay(200 / portTICK_PERIOD_MS);
 

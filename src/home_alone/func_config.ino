@@ -141,14 +141,10 @@ config.MinutesBetweenUploads = config.MinutesBetweenUploads * 60;
 
 config.TimeOutLeavingSec = doc["TimeOutLeavingSec"]; // 30
 config.MaxActivityCount = doc["MaxActivityCount"]; // 25
-config.BeepOnMovement = doc["BeepOnMovement"]; // 1
-config.QuietHoursStart = doc["QuietHoursStart"]; // 23
-config.QuietHoursEnd = doc["QuietHoursEnd"]; // 8
 config.ScreenTimeOutSeconds = doc["ScreenTimeOutSeconds"]; // 30
 
 config.EveningReportingHour = doc["EveningReportingHour"]; // 30
 config.MorningReportingHour = doc["MorningReportingHour"]; // 30
-config.ReportingThreshold =   doc["ReportingThreshold"]; // 30
 config.HoursbetweenNoMovementRep =   doc["HoursbetweenNoMovementRep"]; // 30
 
   // Close the file (Curiously, File's destructor doesn't close the file)
@@ -160,16 +156,14 @@ config.HoursbetweenNoMovementRep =   doc["HoursbetweenNoMovementRep"]; // 30
    if (debug_flag) {
        config.MinutesBetweenUploads = UPLOAD_INTERVALL_TEST;   // set for debug and test
        config.TimeOutLeavingSec = STATE_LEAVE_TEST;          // in seconds for test debug
-       config.QuietHoursStart = 22;        // <------------------------
-       config.QuietHoursEnd = 7;        // <------------------------
        config.HoursbetweenNoMovementRep = 3;
-       config.EveningReportingHour = 18;
+       config.EveningReportingHour = 20;
    
        printFile(filename);
       }
 
-//    config.EveningReportingHour = 19;
-
+ //   config.MorningReportingHour = 14;
+    config.EveningReportingHour = 19;
   /*    
     if (debug_flag_push)            // do this whenever we test important functions
       config.HoursbetweenNoMovementRep = HOURSBETWEENNOMOV;
@@ -225,9 +219,6 @@ void printConfig() {
 
  Serial.println (config.TimeOutLeavingSec); 
  Serial.println (config.MaxActivityCount);
- Serial.println (config.BeepOnMovement); 
- Serial.println (config.QuietHoursStart); 
- Serial.println (config.QuietHoursEnd); 
  Serial.println (config.ScreenTimeOutSeconds); 
  Serial.println (config.PushoverUserkey); 
   Serial.println(config.PushoverToken); 
@@ -236,7 +227,6 @@ void printConfig() {
   Serial.println (config.HoursbetweenNoMovementRep);
   Serial.println (config.EveningReportingHour);
   Serial.println (config.MorningReportingHour);
-  Serial.println (config.ReportingThreshold);
   Serial.println ("--------------------");
   
   Serial.println ("credentials:");

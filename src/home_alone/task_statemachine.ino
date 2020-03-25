@@ -18,8 +18,8 @@ static bool away_first_time = true;                // first_time run through a s
 static bool athome_first_time = true;                // first_time run through a state, bitwise, bit 0 means state 1
 static bool leaving_first_time = true;                // first_time run through a state, bitwise, bit 0 means state 1
 
-int mvcount;
-int mvcount_day;
+int mvcount_push;
+int mvcount_cloud;
 bool do_report= false;
 
 
@@ -30,9 +30,9 @@ time_t leaving_start;
 time_t now_3;
 #define WAIT_TO_REPORT 10000
 
-char bufpush[40];
+char bufpush[60];
 
-
+int retcode;
 int timelastmv;
 
 //-----------------------------------------------------------
@@ -54,7 +54,7 @@ void state_machine( void * parameter )
       // set this to prevent reporting if boot during the day. We want reporting only the next day
       if  (curr_hour >= config.MorningReportingHour)   done_morningreporting = true;
       if  (curr_hour >= config.EveningReportingHour)   done_eveningreporting = true;
-        DEBUGPRINT2 ("M-rep: ");  DEBUGPRINT2 (done_morningreporting);  DEBUGPRINT2 ("  E-rep: ");  DEBUGPRINTLN2 (done_eveningreporting); 
+        DEBUGPRINT0 ("M-rep: ");  DEBUGPRINT0 (done_morningreporting);  DEBUGPRINT0 ("  E-rep: ");  DEBUGPRINTLN0 (done_eveningreporting); 
       
     }
 
@@ -95,10 +95,10 @@ void state_machine( void * parameter )
     if ((now - timelastmv) >= (config.HoursbetweenNoMovementRep * 3600)) {
          DEBUGPRINTLN1 ("no movement for the last period");
           // assemble string to be displayed   
-        sprintf( buf , "Watch out: no movement in last period");
+        sprintf( bufpush , "Watch out: no movement in last period");
         
       // push alert message ------------
-          push_msg (buf,1);             // High priority message       
+          retcode = push_msg (bufpush,1);             // High priority message       
 
      xSemaphoreTake(SemaMovement, portMAX_DELAY);
         timelastMovement = now;
@@ -170,6 +170,8 @@ void do_athome() {
       DEBUGPRINTLN1 (config.HoursbetweenNoMovementRep);
        // nothing else to do ....
     }
+
+
  
 
   // get semaphore and read the clock number 1 ------------------
@@ -184,8 +186,7 @@ void do_athome() {
 
 // get movement count ----------
        xSemaphoreTake(SemaMovement, portMAX_DELAY);
-       mvcount = movCount_reportingPeriod;
-       mvcount_day = movCount_day;
+       mvcount_cloud = movCount_reportingPeriod_cloud;
        timelastmv = timelastMovement;                 // only needed for test runs
        xSemaphoreGive(SemaMovement);
 
@@ -195,21 +196,21 @@ void do_athome() {
     }
 
     if (do_report) {
-      DEBUGPRINT1 ("trying to report to cloud, count:  ");   DEBUGPRINT1 (mvcount); DEBUGPRINT1 (" / "); DEBUGPRINTLN1 (mvcount_day); 
+      DEBUGPRINT1 ("trying to report to cloud, count:  ");   DEBUGPRINTLN1 (mvcount_cloud); 
        do_report = false;
 
          // set up parameter for this job
             wifi_todo = REPORT_CLOUD;
             wifi_order_struct.order = wifi_todo;
-            wifi_order_struct.mvcount  = mvcount;
+            wifi_order_struct.mvcount  = mvcount_cloud;
             ret = wifi_func();
             DEBUGPRINT2 ("wifi_func returns: ");   DEBUGPRINTLN2 (ret);
  
-  vTaskDelay(200 / portTICK_PERIOD_MS);
+            vTaskDelay(200 / portTICK_PERIOD_MS);
 
           if (ret == 0) {           // reset count if ok 
             xSemaphoreTake(SemaMovement, portMAX_DELAY);
-            movCount_reportingPeriod = 0;
+            movCount_reportingPeriod_cloud = 0;
             xSemaphoreGive(SemaMovement);
           }
 
@@ -218,9 +219,11 @@ void do_athome() {
       if (debug_flag) {
        DEBUGPRINT1 ("last movement at: "); DEBUGPRINTLN1 (timelastmv);
       }
+
+     vTaskDelay(4000 / portTICK_PERIOD_MS);        // eingefügt wegen konflikt wifi
 // ------- report to cloud ----------------------------------
     }
-
+         
 
 
 
@@ -238,25 +241,43 @@ void do_athome() {
     but = digitalRead(button_test); // read input value
     if (but == LOW) { // check if the input is HIGH
       DEBUGPRINTLN1 ("button test pressed");
-      push_msg ("Testmeldung", 1);           // use priority 1 HIGH
+       xSemaphoreTake(SemaMovement, portMAX_DELAY);
+       mvcount_push= movCount_reportingPeriod_push;
+       xSemaphoreGive(SemaMovement);
+      
+      sprintf( bufpush , "Testmeldung, Last Reset: %s (%d) count: %d", time_lastreset, lastResetreason, mvcount_push);
+      retcode = push_msg (bufpush, 1);           // use priority 1 HIGH
     }
 
 
    if (config.MorningReportingHour > 0) {
       
     if  ((curr_hour >= config.MorningReportingHour) and (done_morningreporting == false)) {
-
         DEBUGPRINTLN2 ("Morning Reporting");     
+
+// get movement count ----------
+       xSemaphoreTake(SemaMovement, portMAX_DELAY);
+       mvcount_push= movCount_reportingPeriod_push;
+       xSemaphoreGive(SemaMovement);  
+              
            // assemble string to be displayed   
-        sprintf( buf , " Good Morning, Mov: %d /  %d", mvcount, mvcount_day);
+       sprintf( bufpush , "Good Morning, Mov: %d", mvcount_push);
         
       // push morning message ------------
-          push_msg (buf, -1);
-          done_morningreporting = true;
+       retcode = push_msg (bufpush, -1);
+
+       if (retcode == 0)  {
+            xSemaphoreTake(SemaMovement, portMAX_DELAY);
+            movCount_reportingPeriod_push = 0;
+            xSemaphoreGive(SemaMovement); 
+            done_morningreporting = true;
+        }
+        else  vTaskDelay(1000 / portTICK_PERIOD_MS);        
+     
     }
-   }
   
-    
+   }
+     
 // end handling Ev rening eporting
 
    if (config.EveningReportingHour > 0) {
@@ -264,19 +285,33 @@ void do_athome() {
     if  ((curr_hour >= config.EveningReportingHour) and (done_eveningreporting == false)) {
 
         DEBUGPRINTLN2 ("Evening Reporting");     
-           // assemble string to be displayed   
-        sprintf( buf , " Good Night, Mov: %d /  %d", mvcount, mvcount_day);
+
+// get movement count ----------
+       xSemaphoreTake(SemaMovement, portMAX_DELAY);
+       mvcount_push= movCount_reportingPeriod_push;
+       xSemaphoreGive(SemaMovement);
+
+        // assemble string to be displayed   
+       sprintf( bufpush , "Good Night, Mov: %d", mvcount_push);
         
       // push evening message ------------
-          push_msg (buf, -1);
-          done_eveningreporting = true;
+       retcode = push_msg (bufpush, -1);
+
+       if (retcode == 0)  {
+            xSemaphoreTake(SemaMovement, portMAX_DELAY);
+            movCount_reportingPeriod_push = 0;
+            xSemaphoreGive(SemaMovement); 
+            done_eveningreporting = true;
+        }
+        else  vTaskDelay(1000 / portTICK_PERIOD_MS);
+       
     }
-   }
-  
-    
+ 
+   }   
 // end handling Morning reporting
+
     
-    vTaskDelay(500 / portTICK_PERIOD_MS);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
 //  DEBUGPRINTLN1 ("do_athome(
 
 }
@@ -325,9 +360,9 @@ void do_away() {
 
   // check if movement 
    xSemaphoreTake(SemaMovement, portMAX_DELAY);
-   mvcount= movCount_reportingPeriod;
+   mvcount_cloud= movCount_reportingPeriod_cloud;
    xSemaphoreGive(SemaMovement);
-   if (mvcount > 0) {
+   if (mvcount_cloud > 0) {
      state = ATHOME;
      away_first_time = true; 
      DEBUGPRINTLN1 ("movement count > 0 leaving state away ");
@@ -374,7 +409,7 @@ void do_leaving() {
     if (( now_3 - leaving_start) > (config.TimeOutLeavingSec) ) {     // ok, we leave this state
      Serial.println ( now_3 - leaving_start);
       xSemaphoreTake(SemaMovement, portMAX_DELAY);
-      movCount_reportingPeriod = 0;
+      movCount_reportingPeriod_cloud = 0;
       xSemaphoreGive(SemaMovement);
       state = AWAY;
       leaving_first_time = true; 
