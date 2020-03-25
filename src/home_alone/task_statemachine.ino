@@ -261,7 +261,7 @@ void do_athome() {
        xSemaphoreGive(SemaMovement);  
               
            // assemble string to be displayed   
-       sprintf( bufpush , "Good Morning, Mov: %d", mvcount_push);
+       sprintf( bufpush , "Guten Morgen, Anzahl Bewegungen: %d", mvcount_push);
         
       // push morning message ------------
        retcode = push_msg (bufpush, -1);
@@ -292,7 +292,7 @@ void do_athome() {
        xSemaphoreGive(SemaMovement);
 
         // assemble string to be displayed   
-       sprintf( bufpush , "Good Night, Mov: %d", mvcount_push);
+       sprintf( bufpush , "Gute Nacht, Anzahl Bewegungen: %d", mvcount_push);
         
       // push evening message ------------
        retcode = push_msg (bufpush, -1);
