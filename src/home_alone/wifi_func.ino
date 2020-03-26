@@ -2,8 +2,7 @@
 * Home Alone Application
 * Based on a project presentd by Ralph Bacon
 * This version used an ESP32 doing multitasking.
-* by Peter B, from Switzerland
-* Project website http://projects.descan.com/projekt7.html
+
 * 
 //---------------------------------------------------------------
 // conncetion issues see
@@ -344,7 +343,7 @@ void printLocalTime()
   Serial.print ("Local time: ");
   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 }
-//    end of code --------------------------------------------
 
-
+//---------------------------------------------------
+// end of code --------------------------------------------
 //---------------------------------------------------

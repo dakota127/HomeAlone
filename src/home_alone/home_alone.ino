@@ -1,27 +1,55 @@
 /*
-* Home Alone Application
-* This project is based on a project presentd by Ralph Bacon, check it out here:
-* 
-* https://youtu.be/5IxOUxZFfnk
-* https://www.youtube.com/redirect?redir_token=8C-a1g2b7KcNYW5kGnk-NXcvkRV8MTU3OTExMDA4NEAxNTc5MDIzNjg0&event=video_description&v=5IxOUxZFfnk&q=https%3A%2F%2Fgithub.com%2FRalphBacon%2FESP8266-Home-Alone-Vulnerable-Person-Monitor
-* 
-* I tried to understand and unclutter his code but that proved to be futile. It is well documented but just a long list of statements. So I started from scratch.
-* 
-* My Project will run on an ESP32 so therefore use is made of multitasking.
-* 
-* The Application is modeled with a State Machine - this is the only clean solution that will prevent lot's of switches which are in fact
-* implementing a state machine the ugly way. 
-* 
-* I also use Adreas Spiess Debug Prepocessor directives.
-* Check it out here : .https://youtu.be/1eL8dXL3Wow
-* 
+Home Alone Application
+ 
+ by Peter B, from Switzerland
+ Project website http://projects.descan.com/projekt7.html
+
+
+ After hearing an number of stories about old people dying in their appartements I was looking for a simple solution, then, after a while 
+ I came across a project presented by Ralph Bacon, check it out here:
+ https://youtu.be/5IxOUxZFfnk
+
+ I downloaded his code from github but found it somewhat hard to read - being just one long piece of code. Well documented but still
+ hard to read. 
+ Since I wanted to use an ESP32 I started from scratch.
+ 
+ My Project will run on an ESP32 so therefore use is made of multitasking.
+ 
+ The Application is modeled with a State Machine - this is the only clean solution that will prevent lot's of switches which are in fact
+ implementing a state machine the ugly way. 
+ 
+ I also use Adreas Spiess Debug Prepocessor directives (to keep production code small).
+ Check it out here : .https://youtu.be/1eL8dXL3Wow
+
+ I started out with having a state NIGHT with no reporting (same as Ralph Bacon) but later decided to remove this state 
+ and have reporting for the whole 24 hours. Thingspeak is used to report the number of movements to
+
+ Instead of email I opted to use pushover messages for a daily reporting to a smartphone and iPad.
+ 
+ The whole thing is built with Adafruit Feather components. I encountered problems with the OLED display. 
+ I tried several versions of oled libs, including the one from Adafruit. There seem to be timing problems with the ESP32. See the web - they all
+ work well with ESP8266 but not with ESP32.
+ Finally I found this lib to work ok, I followed the following description:
+ https://techtutorialsx.com/2017/12/02/esp32-arduino-interacting-with-a-ssd1306-oled-display/
+ 
+ This LIb is used for the OLDE display:
+ ESP8266_and_ESP32_OLED_driver_for_SSD1306_displays
+ The OLED display is on for 50 sec. It can be switched on for 50 sec. by the press of a button. 
+ Another button is used to force the sending of a test pushover message.
+ 
+ Two led are used: green led simply blinking when the system is running, red led used to show detection of movement.
+ 
+ 4 Task are used, the task running the setup() is terminated after setup is complete.
+ 
+ The config file is read from an micro sd card.
+ The OLED display is uncluttered, showing simply the state of the last connectin to Thingsspeak and Pushover respectively.
+ Pushover can be found here:
 * Pushover Lib on Github
 * https://github.com/ArduinoHannover/Pushover
 * https://alexbloggt.com/esp8266-pushover/
 * 
 */
 //----------------------------------------------------------------
-#define ESP32
 
 #include <time.h>
 #include <WiFi.h>                 // used for thingspeak
@@ -34,11 +62,10 @@
 
 
 // degugging stuff ------------------------------
-#define DEBUGLEVEL 0      // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
+#define DEBUGLEVEL 0        // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
 #include <DebugUtils.h>     // Library von Adreas Spiess
 
-#define DEBUGPUSH true        // für Debug push messages, set to 1 for messages of important events
-
+#define DEBUGPUSH true      // für Debug push messages, set to 1 for messages of important events
 
 
 //--- helper macros ---------- number of items in an array
@@ -46,12 +73,11 @@
 
 //---- Input-Output (gpio) related definitions and variables ----
 #define redledPin 27        // choose the pin for the LED
-#define greenledPin 12     // choose the pin for the LED
-#define inputPin 21        // choose the input pin (for PIR sensor)
-#define button_awayPin 14        // choose the input pin  (A)
-#define button_oledPin 15        // choose the input pin  (C)
-#define button_test 32        // choose the input pin  (C)
-
+#define greenledPin 12      // choose the pin for the LED
+#define inputPin 21         // choose the input pin (for PIR sensor)
+#define button_awayPin 14   // choose the input pin  (A)
+#define button_oledPin 15   // choose the input pin  (C)
+#define button_test 32      // choose the input pin  (C)
 
 
 //-----  Task related definitions and variables ----
@@ -105,9 +131,10 @@ enum {
 uint8_t state = ATHOME;              // state variable is global
 
 //---- communication between tasks ----------------
-static volatile unsigned long movCount_reportingPeriod_cloud = 0;         //  count per reporting period
-static volatile unsigned long movCount_reportingPeriod_push = 0;         //  count per reporting period
-//static volatile unsigned long movCount_day = 0;                     //  total count movements daytime
+static volatile unsigned long movCount_reportingPeriod_cloud = 0;       //  count per reporting period
+static volatile unsigned long movCount_reportingPeriod_push = 0;        //  count per reporting period
+
+
 static volatile unsigned long button_awaypressed = 0;
 static volatile unsigned long button_oledpressed = 0;
 static volatile time_t timelastMovement ;
@@ -152,13 +179,13 @@ struct Config {               /// config struct
  
 };
 char *credentials[] = { "", "", "", "" };
-const char *filename = "/config.json";  // <- SD library uses 8.3 filenames
-Config config;                         // <- global configuration object
+const char *filename = "/config.json";      // <- SD library uses 8.3 filenames
+Config config;                              // <- global configuration object
 
-#define STATE_LEAVE_TEST      120       // in seconds for test debug
-#define UPLOAD_INTERVALL_TEST  300     // in seconds for test debug
-#define PUSHOVER_INTERVALL_TEST  900     // in seconds for test debug
-#define HOURSBETWEENNOMOV   1           // 1 hour
+#define STATE_LEAVE_TEST      120           // in seconds for test debug
+#define UPLOAD_INTERVALL_TEST  300          // in seconds for test debug
+#define PUSHOVER_INTERVALL_TEST  900        // in seconds for test debug
+#define HOURSBETWEENNOMOV   1               // 1 hour
 
 //---- Time related definitions and variables ----
 tm timeinfo;
@@ -174,11 +201,11 @@ char  reset_reason[30];
 // time-date stuff
 static volatile int curr_hour;
 static volatile int curr_dayofyear;
-static volatile int curr_year;   // function returns year since 
+static volatile int curr_year;                  // function returns year since 
 static volatile int old_hour;
 static volatile int old_dayofyear;
-static volatile int old_year;   // function returns year since 
-static bool done_morningreporting = false;           // have we already done it at the specified hour ?
+static volatile int old_year;                   // function returns year since 
+static bool done_morningreporting = false;      // have we already done it at the specified hour ?
 static bool done_eveningreporting = false;
 static volatile bool is_newday = false;
 
@@ -205,7 +232,7 @@ int wifi_func();
 
 //---- This and that -------------------------------
 
-int debug_flag = false;             // for output to serial console, is set if DEBUGLEVEL is > 0
+int debug_flag = false;                 // for output to serial console, is set if DEBUGLEVEL is > 0
 int debug_flag_push = DEBUGPUSH;        // for test push messages  set manually here !!    
     
 int pirState = LOW; // we start, assuming no motion detected
@@ -276,11 +303,11 @@ void setup() {
 
   DEBUGPRINTLN1 ("start setup");
 
-  digitalWrite(redledPin, LOW); // turn LED OFF
+  digitalWrite(redledPin, LOW);             // turn LED OFF
 
            
   DEBUGPRINTLN2 ("about to start task1");
-  vTaskDelay(100 / portTICK_PERIOD_MS);    // start oled task first on core 1
+  vTaskDelay(100 / portTICK_PERIOD_MS);     // start oled task first on core 1
 
 // --------- start function do_oled in a separate task -------------------------------------- 
 // parameters to start a task:
@@ -292,10 +319,10 @@ void setup() {
 
 
 // load configdata into struct --------------------------
-  ret = loadConfig(filename, config);     // load config from json file
+  ret = loadConfig(filename, config);       // load config from json file
 
-  WiFi.mode(WIFI_STA);          // Wifi mode is station          
-  ThingSpeak.begin(client);     // Initialize ThingSpeak
+  WiFi.mode(WIFI_STA);                      // Wifi mode is station          
+  ThingSpeak.begin(client);                 // Initialize ThingSpeak
 
   vTaskDelay(200 / portTICK_PERIOD_MS);
 
@@ -307,9 +334,9 @@ void setup() {
 // init time related stuff
   curr_hour = timeinfo.tm_hour;
   curr_dayofyear = timeinfo.tm_yday;
-  curr_year = timeinfo.tm_year -100;   // function returns year since 1900
+  curr_year = timeinfo.tm_year -100;        // function returns year since 1900
   old_dayofyear = curr_dayofyear;
-  old_year = curr_year  ;   // function returns year since 1900          
+  old_year = curr_year  ;                   // function returns year since 1900          
 
   
   strftime(time_lastreset, 30, "%a %d.%m.%y %T", localtime(&now));
@@ -320,7 +347,7 @@ void setup() {
   }  
 // create other tasks ------------
 
-  DEBUGPRINTLN2 ("about to start task2");             // clock 
+  DEBUGPRINTLN2 ("about to start task2");      // clock 
 //  task can only be started after time is available...
   vTaskDelay(100 / portTICK_PERIOD_MS);
   xTaskCreatePinnedToCore ( task_clock,"clock", 5000, NULL, TASK_PRIORITY, &Task2, CORE_1);
@@ -346,7 +373,7 @@ void setup() {
 
   DEBUGPRINTLN1 ("Setup done...");
 
-  vTaskDelete(NULL);                // delete this initial task
+  vTaskDelete(NULL);                    // delete this initial setup task
 }
 
 
@@ -357,3 +384,6 @@ void loop(){
   delay(1000);
 }
 //--------------------------------------------
+// end of code 
+//--------------------------------------------
+//

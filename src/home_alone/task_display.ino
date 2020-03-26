@@ -16,11 +16,11 @@ Attention:
 ------------------------------------------------------------------------------------------------------------
 * 
 * THIS Function RUNS as a separat task
-* It hanldes the oled display
+* It handles the oled display
 * that is all we do here !
 * 
 * -----------------------------------------------------
-* keep this:
+* keep this (not used):
 *   display.setFont(ArialMT_Plain_24);
     display.drawString(0, 0, "Hello world");
     display.drawString(10,34, "whats up");
@@ -35,7 +35,6 @@ Attention:
 
 // Initialize the OLED display using Arduino Wire:
 SSD1306Wire display(0x3c, SDA, SCL);   // ADDRESS, SDA, SCL  -  SDA and SCL usually populate automatically based on your board's pins_arduino.h
-
 
 time_t display_on;
 time_t now_1;
@@ -161,5 +160,6 @@ void drawImageDemo() {
     display.drawXbm(34, 14, WiFi_Logo_width, WiFi_Logo_height, WiFi_Logo_bits);
 }
 
+//---------------------------------------------------
 // end of code
 //---------------------------------------------------
