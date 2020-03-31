@@ -13,8 +13,8 @@
 */
 
 int order;
-int ret_code;
-
+int ret_int;       // retcode 0 all is well, >0 = not ok 
+bool ret_bool;
 
 //  wifi function ---------------------------------------
 //--------------------------------------------------------
@@ -27,13 +27,14 @@ int wifi_func ()
 //------------------      
       case TEST_WIFI:
         DEBUGPRINTLN3 ("\t\t\t\t\twifi_func: setup wifi");
-        ret_code = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
-        if (ret_code > 5) {
-            Serial.println("\t\t\t\t\terror-error-error - no wifi 1"); 
+        ret_int = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
+        if (ret_int > 5) {
+            Serial.println ("\t\t\t\t\terror-error-error - no wifi 1"); 
             value1_oled = 7;   
         }
         else {
-        value1_oled = 1;   
+        value1_oled = 1;  
+        Serial.println ("\t\t\t\t\tInitial wifi connection ok");  // ALWAYS PRINT THIS 
        }
 
        break;
@@ -42,39 +43,46 @@ int wifi_func ()
       case REPORT_CLOUD:
         DEBUGPRINTLN1 ("\t\t\t\t\twifi_func: report thingspeak");
 
-        ret_code = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
-        if (ret_code > 5) {
+        ret_int = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
+        if (ret_int > 5) {
           Serial.println("\t\t\t\t\terror-error-error - no wifi 2"); 
           value2_oled = 7;   
         }
         else {              // wifi ok
           value2_oled = 1;   
-          ret_code = report_toCloud (wifi_order_struct.mvcount)  ;    // report to thingspeak
-          Serial.print ("report_toCloud: "); Serial.println (ret_code);
-           if (ret_code != 0 ) value2_oled = 5;   
+          ret_int = report_toCloud (wifi_order_struct.mvcount)  ;    // report to thingspeak
+          DEBUGPRINT1 ("report_toCloud: "); DEBUGPRINTLN1 (ret_int);  // 0 = ok, 9 = error 
+          if (ret_int > 0 ) value2_oled = 5;                           // if not true: was error
         }        
           break;
 
 //------------------
       case PUSH_MESG:
         DEBUGPRINT1 ("\t\t\t\t\twifi_func: push message: ");   DEBUGPRINTLN1 ( wifi_order_struct.pushtext);
-        ret_code = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
-        if (ret_code > 5) {
+        ret_int = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
+        if (ret_int > 5) {
           Serial.println("\t\t\t\t\terror-error-error - no wifi 3"); 
           value3_oled = 7;   
+          break;
         }
         else {
-          value3_oled = 1;   
-          ret_code = report_toPushover (wifi_order_struct.pushtext, wifi_order_struct.priority );  
-          // ok returncode is 0 
-          if (ret_code == 0) value3_oled = 1;
-          else  value3_oled = 8;
+          value3_oled = 1;          // default if push ok
+          ret_int = 0;              // default
+          bool ret_bool = report_toPushover (wifi_order_struct.pushtext, wifi_order_struct.priority );  // returns true if ok
+          // ok returncode is true 
+          DEBUGPRINT2 ("\t\t\t\t\treport_to_push returns:: ");   DEBUGPRINTLN1 ( ret_bool);
+          if (!ret_bool) {
+            value3_oled = 8;                       // if not true: was error
+            ret_int = 1;
+          }
+       
         }
       break;
 
       default:
 
         DEBUGPRINTLN1 ("\t\t\t\t\tERROR Taskwifi wrong order");
+        ret_int = 7;
       
     }       // end case statement -----------------------
 
@@ -85,7 +93,7 @@ int wifi_func ()
 
     wifi_disconnect();                // disconnect unti further use
 
-  return (ret_code);                  // wifi_func returns.....
+  return (ret_int);                  // wifi_func returns.....
 
   
 }  // end function
@@ -112,7 +120,7 @@ int setup_wifi(int detail) {
     wifi_firsttime = false;
   }
   
-  DEBUGPRINT2 ("\t\t\t\t\tsetup_wifi: "); DEBUGPRINT2 (use_this_cred); DEBUGPRINT2 (detail);  DEBUGPRINTLN2 (anz_credentials);
+  DEBUGPRINT1 ("\t\t\t\t\tsetup_wifi: "); DEBUGPRINT1 (use_this_cred); DEBUGPRINT1 (detail);  DEBUGPRINTLN1 (anz_credentials);
   int i = 0;
 
 //  Check all of the available wifi credentials 
@@ -158,7 +166,8 @@ int setup_wifi(int detail) {
     }
 }
      
-    
+
+    /*
 //--------------------------------------------------
 int wifi_connect_old( char *ssid, char *pw) {
   bool have_connection = true;
@@ -186,6 +195,7 @@ int wifi_connect_old( char *ssid, char *pw) {
   if (have_connection) return (0);
   else return(9); 
 }
+*/
 
 //--------------------------------------------------
 int wifi_connect( char *ssid, char *pw) {
@@ -205,14 +215,42 @@ int wifi_connect( char *ssid, char *pw) {
     {
         wifiClear();
         WiFi.begin(ssid, pw);
-        vTaskDelay(5000 / portTICK_PERIOD_MS); 
-        wifiStatus = WiFi.status() == WL_CONNECTED;
+        vTaskDelay(2000 / portTICK_PERIOD_MS); 
+        wifiStatus = waitForWifi();
+   //     wifiStatus = WiFi.status() == WL_CONNECTED;
         anz_try-- ;
     }
     Serial.println("");
     
   if (wifiStatus) return (0);
   else return(9); 
+}
+
+//------------------------------------------------
+bool waitForWifi() {
+  DEBUGPRINT1 ("\n");
+  DEBUGPRINT1 ("Waiting for WiFi.");
+
+int retries;
+ 
+   retries = 0;
+   while (WiFi.status() != WL_CONNECTED)  { 
+    retries++;
+    if (retries > 30) break;      // max number retries
+  // Pause the task for 500ms
+    vTaskDelay(300 / portTICK_PERIOD_MS);
+    DEBUGPRINT1  ("."); 
+   }
+    
+  if (WiFi.status() == WL_CONNECTED) {
+    DEBUGPRINTLN3  ("\nconnected");
+    return (true);
+  }
+
+  
+  // no connection...
+  DEBUGPRINTLN3  ("\nno wifi connection");
+  return (false);
 }
 
 //--------------------------------------------------
@@ -255,7 +293,7 @@ void wifi_disconnect () {
 
 void wifiClear()
 {
-    Serial.println ("wifiClear()");
+    DEBUGPRINTLN1 ("wifiClear()");
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
     wifiStatus = WiFi.status() == WL_CONNECTED;
@@ -275,8 +313,8 @@ int get_time() {
      if (getNTPtime(10)) {  // wait up to 10sec to sync
         } 
       else {
-          DEBUGPRINTLN0 ("Time not set");
-          vTaskDelay(300 / portTICK_PERIOD_MS); 
+          DEBUGPRINTLN0 ("Time not set <------------");
+          vTaskDelay(500 / portTICK_PERIOD_MS);               // wait, to prevent fast rebbot sequence
           ESP.restart();
         }
   //  if (debug_flag)  showTime(timeinfo); 

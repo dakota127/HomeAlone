@@ -20,38 +20,8 @@ String tokenstring;
 String userkeystring;
 String devicestring;
 String personstring;
-
-// api.pushover.net root certificate authority
-// SHA1 fingerprint is broken now!
-const char* test_root_ca= \
-     "-----BEGIN CERTIFICATE-----\n" \
-     "MIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh\n" \
-     "MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\n" \
-     "d3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBD\n" \
-     "QTAeFw0wNjExMTAwMDAwMDBaFw0zMTExMTAwMDAwMDBaMGExCzAJBgNVBAYTAlVT\n" \
-     "MRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5j\n" \
-     "b20xIDAeBgNVBAMTF0RpZ2lDZXJ0IEdsb2JhbCBSb290IENBMIIBIjANBgkqhkiG\n" \
-     "9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4jvhEXLeqKTTo1eqUKKPC3eQyaKl7hLOllsB\n" \
-     "CSDMAZOnTjC3U/dDxGkAV53ijSLdhwZAAIEJzs4bg7/fzTtxRuLWZscFs3YnFo97\n" \
-     "nh6Vfe63SKMI2tavegw5BmV/Sl0fvBf4q77uKNd0f3p4mVmFaG5cIzJLv07A6Fpt\n" \
-     "43C/dxC//AH2hdmoRBBYMql1GNXRor5H4idq9Joz+EkIYIvUX7Q6hL+hqkpMfT7P\n" \
-     "T19sdl6gSzeRntwi5m3OFBqOasv+zbMUZBfHWymeMr/y7vrTC0LUq7dBMtoM1O/4\n" \
-     "gdW7jVg/tRvoSSiicNoxBN33shbyTApOB6jtSj1etX+jkMOvJwIDAQABo2MwYTAO\n" \
-     "BgNVHQ8BAf8EBAMCAYYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUA95QNVbR\n" \
-     "TLtm8KPiGxvDl7I90VUwHwYDVR0jBBgwFoAUA95QNVbRTLtm8KPiGxvDl7I90VUw\n" \
-     "DQYJKoZIhvcNAQEFBQADggEBAMucN6pIExIK+t1EnE9SsPTfrgT1eXkIoyQY/Esr\n" \
-     "hMAtudXH/vTBH1jLuG2cenTnmCmrEbXjcKChzUyImZOMkXDiqw8cvpOp/2PV5Adg\n" \
-     "06O/nVsJ8dWO41P0jmP6P6fbtGbfYmbW0W5BjfIttep3Sp+dWOIrWcBAI+0tKIJF\n" \
-     "PnlUkiaY4IBIqDfv8NZ5YBberOgOzW6sRBc4L0na4UU+Krk2U886UAb3LujEV0ls\n" \
-     "YSEY1QSteDwsOoBrp+uvFRTp2InBuThs4pFsiv9kuXclVzDAGySj4dzp30d8tbQk\n" \
-     "CAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4=\n" \
-     "-----END CERTIFICATE-----\n";
-
-//----------------------------------------------------------------
-
-
-
-
+String line;
+int timeout_at;
 //--------------------------------------------------
 //  Thingsspeak Stuff  
 //-------------------------------------------------
@@ -65,7 +35,7 @@ int report_toCloud (int count) {
 
  // Write to ThingSpeak. There are up to 8 fields in a channel, allowing you to store up to 8 different
   // pieces of information in a channel.  Here, we write to field 1.
-  ThingSpeak.begin(client2);  // Initialize ThingSpeak
+  ThingSpeak.begin(client_thing);  // Initialize ThingSpeak
 
   int x = ThingSpeak.writeField (config.ThingSpeakChannelNo , 1, count, (char *)config.ThingSpeakWriteAPIKey);
   if(x == 200) {
@@ -74,7 +44,7 @@ int report_toCloud (int count) {
   }
   else {
     DEBUGPRINTLN0 ("Problem updating channel. HTTP error code " + String(x));
-    return(x);
+    return(9);
   }
 
  }    // end report to cloud
@@ -113,7 +83,11 @@ int push_msg (String text, int prio){
 }
 
 //--------------------------------------------------------------
-int report_toPushover (String messageText, int prio) {
+bool report_toPushover (String messageText, int prio) {
+
+// Attention !!
+// this is not done using the pushover library because I wanted to use better errorhandling.
+// -----------------------------------------------------------------------------------------
 
   DEBUGPRINT1 ("report_toPushover: "); DEBUGPRINT1 (messageText);  DEBUGPRINT1 ("  prio: "); DEBUGPRINTLN1 (prio);
   DEBUGPRINT1 ("devices: "); DEBUGPRINTLN1 (config.PushoverDevices);
@@ -124,80 +98,69 @@ int report_toPushover (String messageText, int prio) {
   userkeystring = config.PushoverUserkey;
   devicestring = config.PushoverDevices;
   personstring = config.PersonName;
-    
-  client.setCACert (test_root_ca);
-  //client.setCertificate(test_client_key); // for client verification
-  //client.setPrivateKey(test_client_cert);  // for client verification
+
 
   DEBUGPRINTLN2 ("\nStarting connection to pushover server...");
   
-  if (!client.connect(push_server, 443))
+  if (!client_push.connect(push_server, 443)) {
     DEBUGPRINTLN2 ("Connection failed!");
-  else {
+    return (false);
+  }
     DEBUGPRINTLN2 ("Connected to pushover server");
 
-//    Serial.println (messageText);
 
     vTaskDelay(300 / portTICK_PERIOD_MS); 
 
  //   int lendata = String(config.PushoverToken).length() + String(config.PushoverUserkey).length() + String(config.PushoverDevices).length() + String(config.PersonName).length() ;  
      int lendata = tokenstring.length() + userkeystring.length() + devicestring.length() + personstring.length() ;  
     
-    Serial.print ("Länge daten: "); Serial.println (lendata);
-    Serial.print ("Länge message: "); Serial.println (messageText.length());
-    lendata = lendata + 36 + messageText.length();
+    DEBUGPRINT2 ("Länge daten: ");      DEBUGPRINTLN2 (lendata);
+    DEBUGPRINT2 ("Länge message: ");   DEBUGPRINTLN2 (messageText.length());
+    lendata = lendata + 46 + messageText.length();
  //   Serial.print ("Länge daten total: "); Serial.println (lendata);
     
     // Make a HTTP request:
-    client.println ("POST /1/messages.json HTTP/1.1");
-    client.println ("Host: api.pushover.net");
-    client.println ("Content-Type: application/x-www-form-urlencoded");
-    client.println ("Connection: close");
-    client.print  ("Content-Length: ");
-    client.print  (lendata);
-    client.println("\r\n");
-/*
-    client.print ("token=");          alternative, not used
-    client.print (mytoken);
-    client.print ("&user=");
-    client.print(myuserkey);
-    client.print ("&device=");
-    client.print (mydevice);
-    client.print ("&title=");
-    client.print (mytitle);
-    client.print ("&message=");
-    client.print (message);
-*/
+    client_push.println ("POST /1/messages.json HTTP/1.1");
+    client_push.println ("Host: api.pushover.net");
+    client_push.println ("Content-Type: application/x-www-form-urlencoded");
+    client_push.println ("Connection: close");
+    client_push.print  ("Content-Length: ");
+    client_push.print  (lendata);
+    client_push.println("\r\n");
 
-//  //   36 literals plus 76 daten  = 112
-    client.print("token=" + tokenstring + "&user=" + userkeystring + "&device=" + devicestring + "&title=" + personstring + "&message=" + messageText);
 
-    
-    while (client.connected()) {
-      String line = client.readStringUntil('\n');
+//  //   46 literals plus 76 daten  = 112
+    client_push.print("token=" + tokenstring + "&user=" + userkeystring + "&device=" + devicestring + "&title=" + personstring + "&priority=" + prio + "&message=" + messageText);
+
+    timeout_at = millis() + 6000;
+    while (client_push.connected()) {
+       DEBUGPRINTLN3 ("im loop");
+       if (timeout_at - millis() < 0) {
+             DEBUGPRINTLN1 ("timeout_push, abort sending");
+             return(false);
+       }
+       vTaskDelay(100 / portTICK_PERIOD_MS); 
+      line = client_push.readStringUntil('\n');
       if (line == "\r") {
-        Serial.println("headers received from server");
+        DEBUGPRINTLN3 ("headers received from server");
         break;
       }
     }
-    // if there are incoming bytes available
-    // from the server, read them and print them:
-    while (client.available()) {
-      char c = client.read();
-      Serial.write(c);
-    }
 
-    client.stop();
+ while (client_push.available() != 0) {
+    if (client_push.read() == '{') break;
   }
-// else clause fertig
 
-  DEBUGPRINT1 ("returcode Pushover: "); 
-  DEBUGPRINTLN1 (ret);        //should return 1 on success aber gibt 0 bei ok
-  if (ret == 1) ret = 0;      // convert this to 0
-  
-  return (ret);
+  line = client_push.readStringUntil('\n');
+  DEBUGPRINTLN2  (line);  
+  if ( line.indexOf("\"status\":1") == -1) {
+    DEBUGPRINTLN1 ("Pushsend bringt error!: "); 
+    return (false);
+  }
+  else return (true);
+    
+
 }
-
 
 
 //-------------------------------------------------------

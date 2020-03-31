@@ -51,6 +51,13 @@ Home Alone Application
 */
 //----------------------------------------------------------------
 
+// degugging stuff ------------------------------
+#define DEBUGLEVEL 0        // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
+#include <DebugUtils.h>     // Library von Adreas Spiess
+
+#define DEBUGPUSH true      // für Debug push messages, set to 1 for messages of important events
+
+
 #include <time.h>
 #include <WiFi.h>                 // used for thingspeak
 #include <WiFiClientSecure.h>     // used for pushover
@@ -59,13 +66,6 @@ Home Alone Application
 #include <SD.h>
 //  siehe beispiele https://github.com/espressif/arduino-esp32/issues/449
 #include <rom/rtc.h>
-
-
-// degugging stuff ------------------------------
-#define DEBUGLEVEL 0        // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
-#include <DebugUtils.h>     // Library von Adreas Spiess
-
-#define DEBUGPUSH true      // für Debug push messages, set to 1 for messages of important events
 
 
 //--- helper macros ---------- number of items in an array
@@ -120,9 +120,12 @@ struct wifi_struct {               /// wifi struct
 
 bool wifiStatus;
 
+WiFiClientSecure  client_push;
+WiFiClient        client_thing;
+
 //---- State Machine related definitions and variables ----
 enum {
-    NIGHT,                                      // finite state machins states
+     // finite state machins states
     ATHOME,
     LEAVING,
     AWAY
@@ -159,9 +162,9 @@ struct Config {               /// config struct
   char Title [20];
   char PersonName [20];
   int MinutesBetweenUploads;
-  char wlanssid_1[12];
+  char wlanssid_1[20];
   char wlanpw_1[15];
-  char wlanssid_2[12];
+  char wlanssid_2[20];
   char wlanpw_2[15];  
   char NTPPool[20];
   char Timezone_Info[60];     // enter your time zone (https://remotemonitoringsystems.ca/time-zone-abbreviations.php)
@@ -209,8 +212,7 @@ static bool done_morningreporting = false;      // have we already done it at th
 static bool done_eveningreporting = false;
 static volatile bool is_newday = false;
 
-WiFiClientSecure client;
-WiFiClient client2;
+
 
 
 //---- Function Prototypes -----------------------
@@ -224,9 +226,8 @@ void task_display (void *);
 void task_clock (void *);
 void do_athome();
 void do_away();
-void do_night();
 void do_leaving();
-int report_toCloud();
+bool report_toCloud();
 int loadConfig ();
 int wifi_func();
 
@@ -283,7 +284,7 @@ void setup() {
   clock_2Semaphore = xSemaphoreCreateMutex();
   
   Serial.begin(115200);
-  delay(2000);   //wait so we see everything
+  vTaskDelay(3000 / portTICK_PERIOD_MS);     // just wait
   display_Running_Sketch();
   
   Serial.print ("CPU0 reset reason: ");
@@ -303,8 +304,12 @@ void setup() {
 
   DEBUGPRINTLN1 ("start setup");
 
-  digitalWrite(redledPin, LOW);             // turn LED OFF
+//  digitalWrite(redledPin, LOW);             // turn LED OFF
 
+
+  
+  movCount_reportingPeriod_push = 0;          // no semaphore needed, no other task running
+  
            
   DEBUGPRINTLN2 ("about to start task1");
   vTaskDelay(100 / portTICK_PERIOD_MS);     // start oled task first on core 1
@@ -322,10 +327,11 @@ void setup() {
   ret = loadConfig(filename, config);       // load config from json file
 
   WiFi.mode(WIFI_STA);                      // Wifi mode is station          
-  ThingSpeak.begin(client);                 // Initialize ThingSpeak
+  ThingSpeak.begin(client_thing);                 // Initialize ThingSpeak
 
   vTaskDelay(200 / portTICK_PERIOD_MS);
 
+  Serial.println ("calling initial test wifi");
   // set up parameter for this job       Text Wifi
   wifi_todo = TEST_WIFI;
   wifi_order_struct.order = wifi_todo;
