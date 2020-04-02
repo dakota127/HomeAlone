@@ -59,11 +59,11 @@ int wifi_func ()
 //------------------
       case PUSH_MESG:
         DEBUGPRINT1 ("\t\t\t\t\twifi_func: push message: ");   DEBUGPRINTLN1 ( wifi_order_struct.pushtext);
+        
         ret_int = setup_wifi ( WIFI_DETAILS);      // Test wifi connection, 
         if (ret_int > 5) {
           Serial.println("\t\t\t\t\terror-error-error - no wifi 3"); 
           value3_oled = 7;   
-          break;
         }
         else {
           value3_oled = 1;          // default if push ok
@@ -82,7 +82,7 @@ int wifi_func ()
       default:
 
         DEBUGPRINTLN1 ("\t\t\t\t\tERROR Taskwifi wrong order");
-        ret_int = 7;
+        ret_int = 3;
       
     }       // end case statement -----------------------
 
@@ -167,50 +167,20 @@ int setup_wifi(int detail) {
 }
      
 
-    /*
-//--------------------------------------------------
-int wifi_connect_old( char *ssid, char *pw) {
-  bool have_connection = true;
-  int anz_try = 0;
-
-  DEBUGPRINT2 ("\t\t\t\t\t");  DEBUGPRINT2 (ssid); DEBUGPRINT2 ("/"); DEBUGPRINTLN2 (pw);
-
-  
-  WiFi.begin(ssid, pw);
-  
-  vTaskDelay(300 / portTICK_PERIOD_MS); 
-
-  
-  while (WiFi.status() != WL_CONNECTED)  { 
-    anz_try++;
-    if (anz_try > 45)   {// wenn noch Eintrag im Router, dann dauert es
-        DEBUGPRINTLN1 ("\t\t\t\t\tno connection");
-        have_connection= false;
-        anz_try = 0;
-        break; 
-    }
-    vTaskDelay(800 / portTICK_PERIOD_MS); 
-    DEBUGPRINT3 ("."); 
-  }
-  if (have_connection) return (0);
-  else return(9); 
-}
-*/
 
 //--------------------------------------------------
 int wifi_connect( char *ssid, char *pw) {
   bool have_connection = true;
   int anz_try = 20;
 
-  DEBUGPRINT2 ("\t\t\t\t\t");  DEBUGPRINT2 (ssid); DEBUGPRINT2 ("/"); DEBUGPRINTLN2 (pw);
+//  DEBUGPRINT2 ("\t\t\t\t\t");  DEBUGPRINT2 (ssid); DEBUGPRINT2 ("/"); DEBUGPRINTLN2 (pw);
 
   
   WiFi.begin(ssid, pw);
   
   vTaskDelay(300 / portTICK_PERIOD_MS); 
 
-  
-    wifiStatus = WiFi.status() == WL_CONNECTED;
+    wifiStatus = false;
     while ((anz_try > 0) && (!wifiStatus))
     {
         wifiClear();
@@ -228,28 +198,27 @@ int wifi_connect( char *ssid, char *pw) {
 
 //------------------------------------------------
 bool waitForWifi() {
-  DEBUGPRINT1 ("\n");
-  DEBUGPRINT1 ("Waiting for WiFi.");
+//  DEBUGPRINT1 ("\n");
+  DEBUGPRINT1 ("\t\t\t\t\twaiting for WiFi.");
 
 int retries;
  
    retries = 0;
    while (WiFi.status() != WL_CONNECTED)  { 
     retries++;
-    if (retries > 30) break;      // max number retries
-  // Pause the task for 500ms
+    if (retries > 20) break;      // max number retries
+  // Pause the task for 300ms
     vTaskDelay(300 / portTICK_PERIOD_MS);
-    DEBUGPRINT1  ("."); 
+    DEBUGPRINT2  ("."); 
    }
     
   if (WiFi.status() == WL_CONNECTED) {
-    DEBUGPRINTLN3  ("\nconnected");
+    DEBUGPRINTLN3  ("\n\t\t\t\t\tconnected");
     return (true);
   }
 
-  
   // no connection...
-  DEBUGPRINTLN3  ("\nno wifi connection");
+  DEBUGPRINTLN3  ("\n\t\t\t\t\tno wifi connection");
   return (false);
 }
 
@@ -293,7 +262,7 @@ void wifi_disconnect () {
 
 void wifiClear()
 {
-    DEBUGPRINTLN1 ("wifiClear()");
+    DEBUGPRINTLN1 ("\n\t\t\t\t\twifiClear()");
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
     wifiStatus = WiFi.status() == WL_CONNECTED;

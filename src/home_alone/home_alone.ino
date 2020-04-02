@@ -318,7 +318,7 @@ void setup() {
 // parameters to start a task:
 //  (name of task , Stack size of task , parameter of the task , priority of the task , Task handle to keep track of created task , core )
 //
-  xTaskCreatePinnedToCore (task_display, "oledtask", 2000, NULL, TASK_PRIORITY, &Task1, CORE_1);
+  xTaskCreatePinnedToCore (task_display, "oledtask", 3000, NULL, TASK_PRIORITY, &Task1, CORE_1);
 
   vTaskDelay(200 / portTICK_PERIOD_MS);
 
@@ -362,7 +362,7 @@ void setup() {
 
    DEBUGPRINTLN2 ("about to start task3");
    vTaskDelay(200 / portTICK_PERIOD_MS);
-   xTaskCreatePinnedToCore (task_detect, "Movement", 2000, NULL, TASK_PRIORITY, &Task3, CORE_0);                 
+   xTaskCreatePinnedToCore (task_detect, "Movement", 2000, NULL, TASK_PRIORITY, &Task3, CORE_1);                 
 
    vTaskDelay(200 / portTICK_PERIOD_MS);
 
@@ -370,7 +370,7 @@ void setup() {
    vTaskDelay(100 / portTICK_PERIOD_MS);
 
 // Tast state machine  - the main loop
-   xTaskCreatePinnedToCore ( state_machine, "STM", 11000, NULL, TASK_PRIORITY, &Task4, CORE_1);
+   xTaskCreatePinnedToCore ( state_machine, "STM", 10000, NULL, TASK_PRIORITY, &Task4, CORE_1);
 
    vTaskDelay(200 / portTICK_PERIOD_MS);
 

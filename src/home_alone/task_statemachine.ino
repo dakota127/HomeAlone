@@ -21,7 +21,7 @@ static bool leaving_first_time = true;                // first_time run through 
 int mvcount_push;
 int mvcount_cloud;
 bool do_report= false;
-
+int moev_repount = 0;
 
 time_t now_4;
 static time_t last_time_away_report;
@@ -52,6 +52,7 @@ void state_machine( void * parameter )
       main_firsttime = false;
       state = ATHOME;                   // initial state of state machine
       // set this to prevent reporting if boot during the day. We want reporting only the next day
+      moev_repount = 0;                   // repeat count morning or evening reporting
       if  (curr_hour >= config.MorningReportingHour)   done_morningreporting = true;
       if  (curr_hour >= config.EveningReportingHour)   done_eveningreporting = true;
         DEBUGPRINT0 ("M-rep: ");  DEBUGPRINT0 (done_morningreporting);  DEBUGPRINT0 ("  E-rep: ");  DEBUGPRINTLN0 (done_eveningreporting); 
@@ -84,6 +85,7 @@ void state_machine( void * parameter )
       is_newday = true;
       done_morningreporting = false;      // reset this for the new day that has just started
       done_eveningreporting = false;      // reset this for the new day
+      moev_repount = 0;                   // repeat count morning or evening reporting
     }
   
 
@@ -250,6 +252,7 @@ void do_athome() {
       sprintf( bufpush , "Testmeldung, Last Reset: %s (%d) count: %d   ", time_lastreset, lastResetreason, mvcount_push);
       retcode = push_msg (bufpush, 1);           // use priority 1 HIGH
       DEBUGPRINT1 ("push_msg() returns: "); DEBUGPRINTLN1 (retcode);
+      vTaskDelay(400 / portTICK_PERIOD_MS);
     }
 
 
@@ -274,9 +277,17 @@ void do_athome() {
             movCount_reportingPeriod_push = 0;
             xSemaphoreGive(SemaMovement); 
             done_morningreporting = true;
+        } 
+        else {   
+          vTaskDelay(4000 / portTICK_PERIOD_MS);
+          if (moev_repount == 0) {               // repeat count morning or evening reporting
+              ++moev_repount;
+          }
+           else {
+            done_morningreporting = true;   
+            moev_repount = 0;
+          }  
         }
-        else  vTaskDelay(1000 / portTICK_PERIOD_MS);        
-     
     }
   
    }
@@ -304,18 +315,26 @@ void do_athome() {
             xSemaphoreTake(SemaMovement, portMAX_DELAY);
             movCount_reportingPeriod_push = 0;
             xSemaphoreGive(SemaMovement); 
-            
             done_eveningreporting = true;
         }
-        else  vTaskDelay(1000 / portTICK_PERIOD_MS);
-       
+        else {
+          vTaskDelay(4000 / portTICK_PERIOD_MS);
+          if (moev_repount == 0) {               // repeat count morning or evening reporting
+              ++moev_repount;
+          }
+          else {
+            done_eveningreporting = true;   
+            moev_repount = 0;
+          }  
+        }
+      
     }
  
    }   
 // end handling Morning reporting
 
     
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    vTaskDelay(200 / portTICK_PERIOD_MS);
 //  DEBUGPRINTLN1 ("do_athome(
 
 }

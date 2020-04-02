@@ -69,7 +69,7 @@ int push_msg (String text, int prio){
         wifi_order_struct.priority = prio;    
         ret = wifi_func();
         DEBUGPRINT2 ("\t\twifi_func returns: ");   DEBUGPRINTLN2 (ret);
-        if (ret == 0) {           // reset count if ok 
+        if (ret == 0) {        
          DEBUGPRINTLN1 ("\t\tmessage sent ok");
         }
         xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
@@ -77,7 +77,7 @@ int push_msg (String text, int prio){
         xSemaphoreGive(SemaOledSignal);        
         
         vTaskDelay(200 / portTICK_PERIOD_MS);
-        return(ret); 
+        return (ret); 
 // ------- report to pushover ----------------------------------
      
 }
