@@ -11,6 +11,7 @@
 * to compute the capacity.
 */
 
+
 #define NUMBEROF_TRIES 2
 
 const char*  push_server = "api.pushover.net";  // Server URL
@@ -21,6 +22,7 @@ String userkeystring;
 String devicestring;
 String personstring;
 String line;
+String linelog;
 int timeout_at;
 //--------------------------------------------------
 //  Thingsspeak Stuff  
@@ -102,65 +104,27 @@ bool report_toPushover (String messageText, int prio) {
 
   DEBUGPRINTLN2 ("\nStarting connection to pushover server...");
   
-  if (!client_push.connect(push_server, 443)) {
-    DEBUGPRINTLN2 ("Connection failed!");
-    return (false);
-  }
-    DEBUGPRINTLN2 ("Connected to pushover server");
-
-
-    vTaskDelay(300 / portTICK_PERIOD_MS); 
-
- //   int lendata = String(config.PushoverToken).length() + String(config.PushoverUserkey).length() + String(config.PushoverDevices).length() + String(config.PersonName).length() ;  
-     int lendata = tokenstring.length() + userkeystring.length() + devicestring.length() + personstring.length() ;  
-    
-    DEBUGPRINT2 ("Länge daten: ");      DEBUGPRINTLN2 (lendata);
-    DEBUGPRINT2 ("Länge message: ");   DEBUGPRINTLN2 (messageText.length());
-    lendata = lendata + 46 + messageText.length();
- //   Serial.print ("Länge daten total: "); Serial.println (lendata);
-    
-    // Make a HTTP request:
-    client_push.println ("POST /1/messages.json HTTP/1.1");
-    client_push.println ("Host: api.pushover.net");
-    client_push.println ("Content-Type: application/x-www-form-urlencoded");
-    client_push.println ("Connection: close");
-    client_push.print  ("Content-Length: ");
-    client_push.print  (lendata);
-    client_push.println("\r\n");
-
-
-//  //   46 literals plus 76 daten  = 112
-    client_push.print("token=" + tokenstring + "&user=" + userkeystring + "&device=" + devicestring + "&title=" + personstring + "&priority=" + prio + "&message=" + messageText);
-
-    timeout_at = millis() + 6000;
-    while (client_push.connected()) {
-       DEBUGPRINTLN3 ("im loop");
-       if (timeout_at - millis() < 0) {
-             DEBUGPRINTLN1 ("timeout_push, abort sending");
-             return(false);
-       }
-       vTaskDelay(100 / portTICK_PERIOD_MS); 
-      line = client_push.readStringUntil('\n');
-      if (line == "\r") {
-        DEBUGPRINTLN3 ("headers received from server");
-        break;
-      }
-    }
-
- while (client_push.available() != 0) {
-    if (client_push.read() == '{') break;
+  Pushover po = Pushover(config.PushoverToken,config.PushoverUserkey);
+  po.setHTML (true);
+  po.setDevice("myiphone,myipad");
+  po.setTitle (personstring);
+  po.setMessage(messageText);
+  po.setPriority(prio);  
+  po.setSound("bike");
+  bool ret = po.send();
+  DEBUGPRINT2 ("Returncode: "); DEBUGPRINTLN2 (ret);     //should return true on success 
+ 
+  if (!ret) {
+    getTimeStamp();
+    getCurrTime(false); 
+    logMessage = String(currTime) + "," + "pushover failed" + "\r\n";
+    log_SDCard(logMessage, path);   
   }
 
-  line = client_push.readStringUntil('\n');
-  DEBUGPRINTLN2  (line);  
-  if ( line.indexOf("\"status\":1") == -1) {
-    DEBUGPRINTLN1 ("Pushsend bringt error!: "); 
-    return (false);
-  }
-  else return (true);
-    
-
+  return (ret);
+ 
 }
+
 
 
 //-------------------------------------------------------

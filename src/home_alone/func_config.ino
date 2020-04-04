@@ -162,8 +162,8 @@ config.HoursbetweenNoMovementRep =   doc["HoursbetweenNoMovementRep"]; // 30
        printFile(filename);
       }
 
- //    config.MorningReportingHour = 10;
- //    config.EveningReportingHour = 19;
+     config.MorningReportingHour = 11;
+ //    config.EveningReportingHour = 22;
   /*    
     if (debug_flag_push)            // do this whenever we test important functions
       config.HoursbetweenNoMovementRep = HOURSBETWEENNOMOV;

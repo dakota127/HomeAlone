@@ -67,10 +67,11 @@ int wifi_func ()
         }
         else {
           value3_oled = 1;          // default if push ok
-          ret_int = 0;              // default
-          bool ret_bool = report_toPushover (wifi_order_struct.pushtext, wifi_order_struct.priority );  // returns true if ok
+          ret_int = 0;              // default ok
+          ret_bool = report_toPushover (wifi_order_struct.pushtext, wifi_order_struct.priority );  // returns true if ok
           // ok returncode is true 
           DEBUGPRINT2 ("\t\t\t\t\treport_to_push returns:: ");   DEBUGPRINTLN1 ( ret_bool);
+          
           if (!ret_bool) {
             value3_oled = 8;                       // if not true: was error
             ret_int = 1;
@@ -277,7 +278,7 @@ int get_time() {
  configTime(0, 0, config.NTPPool);
   // See https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv for Timezone codes for your region
   setenv("TZ", config.Timezone_Info, 1);
-  DEBUGPRINTLN2 (config.Timezone_Info);
+  DEBUGPRINTLN3 (config.Timezone_Info);
 
      if (getNTPtime(10)) {  // wait up to 10sec to sync
         } 
@@ -298,7 +299,7 @@ int get_time() {
 
 bool getNTPtime(int sec) {
 
-  DEBUGPRINTLN2 ("get time");
+    DEBUGPRINTLN2 ("->doing getNTPtime");
 
     uint32_t start = millis();
     do {
@@ -309,10 +310,32 @@ bool getNTPtime(int sec) {
     } while (((millis() - start) <= (1000 * sec)) && (timeinfo.tm_year < (2016 - 1900)));
     
     if (timeinfo.tm_year <= (2016 - 1900)) return false;  // the NTP call was not successful
-    DEBUGPRINT2 ("now ");  DEBUGPRINTLN2 (now);
+  //  DEBUGPRINT2 ("now ");  DEBUGPRINTLN2 (now);
 
                                             
   return true;
+}
+
+// -------------------------------------------------
+
+void getCurrTime(bool how) {
+
+ delay(200);
+
+  if (how) strftime(currTime, 30, "%a  %d-%m-%y %T", localtime(&now));
+  else strftime(currTime, 30, "%d-%m-%y %H:%M:%S", localtime(&now));
+  DEBUGPRINTLN3 (currTime);
+}
+
+//----------------------------------------------
+// Function to get date and time from NTPClient
+void getTimeStamp() {
+
+   DEBUGPRINTLN2 ("->doing getTimeStamp()");
+    get_time();
+  // Extract time
+    timeStamp = now;
+     DEBUGPRINT3 ("timeStamp: ");  DEBUGPRINTLN3 (timeStamp);
 }
 
 

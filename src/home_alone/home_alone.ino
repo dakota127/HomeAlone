@@ -66,7 +66,11 @@ Home Alone Application
 #include <SD.h>
 //  siehe beispiele https://github.com/espressif/arduino-esp32/issues/449
 #include <rom/rtc.h>
+#include "Pushover.h"
 
+// Libraries for Logging on SD card
+#include "FS.h"
+#include "SD.h"
 
 //--- helper macros ---------- number of items in an array
 #define NUMITEMS(arg) ((unsigned int) (sizeof (arg) / sizeof (arg [0])))
@@ -185,6 +189,9 @@ char *credentials[] = { "", "", "", "" };
 const char *filename = "/config.json";      // <- SD library uses 8.3 filenames
 Config config;                              // <- global configuration object
 
+const char* path = "/log.txt";              // logfile on sd card
+String logMessage;
+
 #define STATE_LEAVE_TEST      120           // in seconds for test debug
 #define UPLOAD_INTERVALL_TEST  300          // in seconds for test debug
 #define PUSHOVER_INTERVALL_TEST  900        // in seconds for test debug
@@ -195,6 +202,8 @@ tm timeinfo;
 time_t now;
 long unsigned lastNTPtime;
 unsigned long lastEntryTime;
+char currTime[80];
+String timeStamp;
 
 //boot info 
 char time_lastreset[30];
@@ -322,6 +331,7 @@ void setup() {
 
   vTaskDelay(200 / portTICK_PERIOD_MS);
 
+  int ret = logInit(path);
 
 // load configdata into struct --------------------------
   ret = loadConfig(filename, config);       // load config from json file
@@ -379,7 +389,13 @@ void setup() {
 
   DEBUGPRINTLN1 ("Setup done...");
 
-  vTaskDelete(NULL);                    // delete this initial setup task
+
+   getTimeStamp();
+   getCurrTime(false); 
+   logMessage = String(currTime) + "," +  "Setup ended" + "\r\n";
+   log_SDCard(logMessage, path);
+   vTaskDelay(700 / portTICK_PERIOD_MS);
+   vTaskDelete(NULL);                    // delete this initial setup task
 }
 
 
