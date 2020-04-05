@@ -44,9 +44,8 @@ Home Alone Application
  The config file is read from an micro sd card.
  The OLED display is uncluttered, showing simply the state of the last connectin to Thingsspeak and Pushover respectively.
  Pushover can be found here:
-* Pushover Lib on Github
-* https://github.com/ArduinoHannover/Pushover
-* https://alexbloggt.com/esp8266-pushover/
+* myPushover Lib on Github
+https://github.com/dakota127/myPushover
 * 
 */
 //----------------------------------------------------------------
@@ -66,7 +65,7 @@ Home Alone Application
 #include <SD.h>
 //  siehe beispiele https://github.com/espressif/arduino-esp32/issues/449
 #include <rom/rtc.h>
-#include "Pushover.h"
+#include <myPushover.h>         // my Pushover Library
 
 // Libraries for Logging on SD card
 #include "FS.h"

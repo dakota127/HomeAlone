@@ -5,6 +5,8 @@
 * by Peter B, from Switzerland
 * Project website http://projects.descan.com/projekt7.html
 * 
+Pushover Library used
+https://github.com/dakota127/myPushover
 
 * JSON:
 * arduinojson.org/v6/assistant 
@@ -14,7 +16,6 @@
 
 #define NUMBEROF_TRIES 2
 
-const char*  push_server = "api.pushover.net";  // Server URL
 // ThingSpeak settings
 const char* thing_server = "api.thingspeak.com";
 String tokenstring;
@@ -24,6 +25,7 @@ String personstring;
 String line;
 String linelog;
 int timeout_at;
+int retc;
 //--------------------------------------------------
 //  Thingsspeak Stuff  
 //-------------------------------------------------
@@ -39,13 +41,13 @@ int report_toCloud (int count) {
   // pieces of information in a channel.  Here, we write to field 1.
   ThingSpeak.begin(client_thing);  // Initialize ThingSpeak
 
-  int x = ThingSpeak.writeField (config.ThingSpeakChannelNo , 1, count, (char *)config.ThingSpeakWriteAPIKey);
-  if(x == 200) {
+  retc  = ThingSpeak.writeField (config.ThingSpeakChannelNo , 1, count, (char *)config.ThingSpeakWriteAPIKey);
+  if(retc == 200) {
     DEBUGPRINTLN1 ("Channel update successful.");
     return (0);
   }
   else {
-    DEBUGPRINTLN0 ("Problem updating channel. HTTP error code " + String(x));
+    DEBUGPRINTLN0 ("Problem updating channel. HTTP error code " + String(retc));
     return(9);
   }
 
@@ -69,9 +71,9 @@ int push_msg (String text, int prio){
         wifi_order_struct.order = wifi_todo;
         wifi_order_struct.pushtext = text;
         wifi_order_struct.priority = prio;    
-        ret = wifi_func();
-        DEBUGPRINT2 ("\t\twifi_func returns: ");   DEBUGPRINTLN2 (ret);
-        if (ret == 0) {        
+        retc = wifi_func();
+        DEBUGPRINT2 ("\t\twifi_func returns: ");   DEBUGPRINTLN2 (retc);
+        if (retc == 0) {        
          DEBUGPRINTLN1 ("\t\tmessage sent ok");
         }
         xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
@@ -79,16 +81,15 @@ int push_msg (String text, int prio){
         xSemaphoreGive(SemaOledSignal);        
         
         vTaskDelay(200 / portTICK_PERIOD_MS);
-        return (ret); 
+        return (retc); 
 // ------- report to pushover ----------------------------------
      
 }
 
 //--------------------------------------------------------------
-bool report_toPushover (String messageText, int prio) {
+int report_toPushover (String messageText, int prio) {
 
-// Attention !!
-// this is not done using the pushover library because I wanted to use better errorhandling.
+// 
 // -----------------------------------------------------------------------------------------
 
   DEBUGPRINT1 ("report_toPushover: "); DEBUGPRINT1 (messageText);  DEBUGPRINT1 ("  prio: "); DEBUGPRINTLN1 (prio);
@@ -104,24 +105,26 @@ bool report_toPushover (String messageText, int prio) {
 
   DEBUGPRINTLN2 ("\nStarting connection to pushover server...");
   
-  Pushover po = Pushover(config.PushoverToken,config.PushoverUserkey);
+  myPushover po = myPushover (config.PushoverToken,config.PushoverUserkey);
   po.setHTML (true);
   po.setDevice("myiphone,myipad");
   po.setTitle (personstring);
   po.setMessage(messageText);
   po.setPriority(prio);  
   po.setSound("bike");
-  bool ret = po.send();
-  DEBUGPRINT2 ("Returncode: "); DEBUGPRINTLN2 (ret);     //should return true on success 
+  if (debug_flag) po.setDebug (true);
+  int retc = po.send();
+  DEBUGPRINT2 ("Returncode: "); DEBUGPRINTLN2 (retc);     //should return true on success 
  
-  if (!ret) {
+  if (retc > 0) {
     getTimeStamp();
     getCurrTime(false); 
-    logMessage = String(currTime) + "," + "pushover failed" + "\r\n";
+
+    logMessage = String(currTime) + ",pushover error: " +  String (retc) + "\r\n";
     log_SDCard(logMessage, path);   
   }
 
-  return (ret);
+  return (retc);
  
 }
 

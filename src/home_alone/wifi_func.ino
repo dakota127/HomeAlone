@@ -68,11 +68,11 @@ int wifi_func ()
         else {
           value3_oled = 1;          // default if push ok
           ret_int = 0;              // default ok
-          ret_bool = report_toPushover (wifi_order_struct.pushtext, wifi_order_struct.priority );  // returns true if ok
+          ret_int = report_toPushover (wifi_order_struct.pushtext, wifi_order_struct.priority );  // returns true if ok
           // ok returncode is true 
           DEBUGPRINT2 ("\t\t\t\t\treport_to_push returns:: ");   DEBUGPRINTLN1 ( ret_bool);
           
-          if (!ret_bool) {
+          if (ret_int > 0) {
             value3_oled = 8;                       // if not true: was error
             ret_int = 1;
           }
