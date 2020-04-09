@@ -26,6 +26,8 @@ String line;
 String linelog;
 int timeout_at;
 int retc;
+String html_response;
+
 //--------------------------------------------------
 //  Thingsspeak Stuff  
 //-------------------------------------------------
@@ -113,14 +115,13 @@ int report_toPushover (String messageText, int prio) {
   po.setPriority(prio);  
   po.setSound("bike");
   if (debug_flag) po.setDebug (true);
-  int retc = po.send();
-  DEBUGPRINT2 ("Returncode: "); DEBUGPRINTLN2 (retc);     //should return true on success 
+  int retc = po.send(html_response);
+  DEBUGPRINT2 ("Returncode: "); DEBUGPRINT2 (retc);  DEBUGPRINT2 (" / ");   DEBUGPRINTLN2 (html_response);  //should return true on success 
  
   if (retc > 0) {
     getTimeStamp();
     getCurrTime(false); 
-
-    logMessage = String(currTime) + ",pushover error: " +  String (retc) + "\r\n";
+    logMessage = String(currTime) + ",pushover error: " +  String (retc) + "/" + html_response + "\r\n";
     log_SDCard(logMessage, path);   
   }
 
