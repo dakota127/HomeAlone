@@ -37,6 +37,8 @@ int loadConfig (const char *filename, Config &config) {
           { 
             DEBUGPRINTLN0 ("\nFailed to initialize SD library");
             failed = true;
+
+           vTaskDelay(1000 / portTICK_PERIOD_MS);
            ESP.restart();
             return (9);
           }
@@ -162,7 +164,7 @@ config.HoursbetweenNoMovementRep =   doc["HoursbetweenNoMovementRep"]; // 30
        printFile(filename);
       }
 
-  //     config.MorningReportingHour = 11;
+   //   config.MorningReportingHour = 14;
   //   config.EveningReportingHour = 23;
   /*    
     if (debug_flag_push)            // do this whenever we test important functions

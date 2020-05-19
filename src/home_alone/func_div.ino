@@ -1,16 +1,16 @@
 /* -------------------------------------------------------------------
-* Home Alone Application
-* Based on a project presentd by Ralph Bacon
-* This version used an ESP32 doing multitasking.
-* by Peter B, from Switzerland
-* Project website http://projects.descan.com/projekt7.html
-* 
-Pushover Library used
-https://github.com/dakota127/myPushover
+  Home Alone Application
+  Based on a project presentd by Ralph Bacon
+  This version used an ESP32 doing multitasking.
+  by Peter B, from Switzerland
+  Project website http://projects.descan.com/projekt7.html
 
-* JSON:
-* arduinojson.org/v6/assistant 
-* to compute the capacity.
+  Pushover Library used
+  https://github.com/dakota127/myPushover
+
+  JSON:
+  arduinojson.org/v6/assistant
+  to compute the capacity.
 */
 
 
@@ -29,74 +29,79 @@ int retc;
 String html_response;
 
 //--------------------------------------------------
-//  Thingsspeak Stuff  
+//  Thingsspeak Stuff
 //-------------------------------------------------
 int report_toCloud (int count) {
-  
-// NOte:
-// For users of the free option, the message update interval limit remains limited at 15 seconds.
-   DEBUGPRINT1 ("Cloud Update count: ");
-   DEBUGPRINTLN1 (count);
+
+  // NOte:
+  // For users of the free option, the message update interval limit remains limited at 15 seconds.
+  DEBUGPRINT1 ("Cloud Update count: ");
+  DEBUGPRINTLN1 (count);
 
 
- // Write to ThingSpeak. There are up to 8 fields in a channel, allowing you to store up to 8 different
+  // Write to ThingSpeak. There are up to 8 fields in a channel, allowing you to store up to 8 different
   // pieces of information in a channel.  Here, we write to field 1.
   ThingSpeak.begin(client_thing);  // Initialize ThingSpeak
 
   retc  = ThingSpeak.writeField (config.ThingSpeakChannelNo , 1, count, (char *)config.ThingSpeakWriteAPIKey);
-  if(retc == 200) {
+  if (retc == 200) {
     DEBUGPRINTLN1 ("Channel update successful.");
     return (0);
   }
   else {
     DEBUGPRINTLN0 ("Problem updating channel. HTTP error code " + String(retc));
-    return(9);
+    return (9);
   }
 
- }    // end report to cloud
+}    // end report to cloud
 
- 
+
 // -------------------------------------------------
-// Pushover  stuff 
+// Pushover  stuff
 //----------------------------------------------------
 //--------------------------------------------------------------
-int push_msg (String text, int prio){
-  
-// ------- report to pushover ----------------------------------
+int push_msg (String text, int prio) {
 
- //   return(0);
+  // ------- report to pushover ----------------------------------
 
-    DEBUGPRINTLN1 ("\t\tsend Pushover message");
+  //   return(0);
 
-         // set up parameter for this job
-        wifi_todo = PUSH_MESG;
-        wifi_order_struct.order = wifi_todo;
-        wifi_order_struct.pushtext = text;
-        wifi_order_struct.priority = prio;    
-        retc = wifi_func();
-        DEBUGPRINT2 ("\t\twifi_func returns: ");   DEBUGPRINTLN2 (retc);
-        if (retc == 0) {        
-         DEBUGPRINTLN1 ("\t\tmessage sent ok");
-        }
-        xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
-         oledsignal = 1;
-        xSemaphoreGive(SemaOledSignal);        
-        
-        vTaskDelay(200 / portTICK_PERIOD_MS);
-        return (retc); 
-// ------- report to pushover ----------------------------------
-     
+  DEBUGPRINTLN1 ("\t\tsend Pushover message");
+
+  // set up parameter for this job
+  wifi_todo = PUSH_MESG;
+  wifi_order_struct.order = wifi_todo;
+  wifi_order_struct.pushtext = text;
+  wifi_order_struct.priority = prio;
+  retc = wifi_func();
+  DEBUGPRINT2 ("\t\twifi_func returns: ");   DEBUGPRINTLN2 (retc);
+  if (retc == 0) {
+    DEBUGPRINTLN1 ("\t\tmessage sent ok");
+  }
+  xSemaphoreTake(SemaOledSignal, portMAX_DELAY);    // signal oled task to switch display on
+  oledsignal = 1;
+  xSemaphoreGive(SemaOledSignal);
+
+  vTaskDelay(200 / portTICK_PERIOD_MS);
+  return (retc);
+  // ------- report to pushover ----------------------------------
+
 }
 
 //--------------------------------------------------------------
 int report_toPushover (String messageText, int prio) {
 
-// 
-// -----------------------------------------------------------------------------------------
+  //
+  // -----------------------------------------------------------------------------------------
 
   DEBUGPRINT1 ("report_toPushover: "); DEBUGPRINT1 (messageText);  DEBUGPRINT1 ("  prio: "); DEBUGPRINTLN1 (prio);
   DEBUGPRINT1 ("devices: "); DEBUGPRINTLN1 (config.PushoverDevices);
   DEBUGPRINT1 ("token: "); DEBUGPRINT1 (config.PushoverToken); DEBUGPRINT1 ("  Key: "); DEBUGPRINTLN1 (config.PushoverUserkey);
+
+  getTimeStamp();
+  getCurrTime(false);
+  logMessage = String(currTime) + ",Trying pushover\r\n";
+  log_SDCard(logMessage, path);
 
 
   tokenstring = config.PushoverToken;
@@ -106,27 +111,39 @@ int report_toPushover (String messageText, int prio) {
 
 
   DEBUGPRINTLN2 ("\nStarting connection to pushover server...");
-  
-  myPushover po = myPushover (config.PushoverToken,config.PushoverUserkey);
+
+  myPushover po = myPushover (config.PushoverToken, config.PushoverUserkey);
   po.setHTML (true);
   po.setDevice("myiphone,myipad");
   po.setTitle (personstring);
   po.setMessage(messageText);
-  po.setPriority(prio);  
+  po.setPriority(prio);
   po.setSound("bike");
   if (debug_flag) po.setDebug (true);
   int retc = po.send(html_response);
-  DEBUGPRINT2 ("Returncode: "); DEBUGPRINT2 (retc);  DEBUGPRINT2 (" / ");   DEBUGPRINTLN2 (html_response);  //should return true on success 
- 
-  if (retc > 0) {
-    getTimeStamp();
-    getCurrTime(false); 
-    logMessage = String(currTime) + ",pushover error: " +  String (retc) + "/" + html_response + "\r\n";
-    log_SDCard(logMessage, path);   
-  }
+  DEBUGPRINT2 ("Returncode: "); DEBUGPRINT2 (retc);  DEBUGPRINT2 (" / ");   DEBUGPRINTLN2 (html_response);  //should return true on success
 
-  return (retc);
- 
+  // temporär make logentry everytime
+  getTimeStamp();
+  getCurrTime(false);
+  logMessage = String(currTime) + ",pushover retcode: " +  String (retc) + "/" + html_response + "\r\n";
+  log_SDCard(logMessage, path);
+
+
+  if (retc < 2) return (0);
+  else return (retc);
+
+  /*
+    if (retc > 1) {
+      getTimeStamp();
+      getCurrTime(false);
+      logMessage = String(currTime) + ",pushover error: " +  String (retc) + "/" + html_response + "\r\n";
+      log_SDCard(logMessage, path);
+    }
+
+
+    return (retc);
+  */
 }
 
 
@@ -134,7 +151,7 @@ int report_toPushover (String messageText, int prio) {
 //-------------------------------------------------------
 void store_reset_reason(RESET_REASON reason)
 {
- 
+
   switch ( reason)
   {
 
@@ -151,11 +168,11 @@ void store_reset_reason(RESET_REASON reason)
     case 12 : sprintf( reset_reason , "%s ", "SW_CPU_RESET");     break;       /**<12, Software reset CPU*/
     case 13 : sprintf( reset_reason , "%s ", "RTCWDT_CPU_RESET"); break;       /**<13, RTC Watch dog Reset CPU*/
     case 14 : sprintf( reset_reason , "%s ", "EXT_CPU_RESET");    break;       /**<14, for APP CPU, reseted by PRO CPU*/
-    case 15 : sprintf( reset_reason , "%s ", "RTCWDT_BROWN_OUT_RESET");break;  /**<15, Reset when the vdd voltage is not stable*/
+    case 15 : sprintf( reset_reason , "%s ", "RTCWDT_BROWN_OUT_RESET"); break; /**<15, Reset when the vdd voltage is not stable*/
     case 16 : sprintf( reset_reason , "%s ", "RTCWDT_RTC_RESET"); break;       /**<16, RTC Watch dog reset digital core and rtc module*/
     default : sprintf( reset_reason , "%s ", "NO_MEAN");
   }
-  
+
 }
 
 

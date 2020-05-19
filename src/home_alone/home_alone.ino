@@ -1,52 +1,52 @@
 /*
-Home Alone Application
- 
- by Peter B, from Switzerland
- Project website http://projects.descan.com/projekt7.html
+  Home Alone Application
+
+  by Peter B, from Switzerland
+  Project website http://projects.descan.com/projekt7.html
 
 
- After hearing an number of stories about old people dying in their appartements I was looking for a simple solution, then, after a while 
- I came across a project presented by Ralph Bacon, check it out here:
- https://youtu.be/5IxOUxZFfnk
+  After hearing an number of stories about old people dying in their appartements I was looking for a simple solution, then, after a while
+  I came across a project presented by Ralph Bacon, check it out here:
+  https://youtu.be/5IxOUxZFfnk
 
- I downloaded his code from github but found it somewhat hard to read - being just one long piece of code. Well documented but still
- hard to read. 
- Since I wanted to use an ESP32 I started from scratch.
- 
- My Project will run on an ESP32 so therefore use is made of multitasking.
- 
- The Application is modeled with a State Machine - this is the only clean solution that will prevent lot's of switches which are in fact
- implementing a state machine the ugly way. 
- 
- I also use Adreas Spiess Debug Prepocessor directives (to keep production code small).
- Check it out here : .https://youtu.be/1eL8dXL3Wow
+  I downloaded his code from github but found it somewhat hard to read - being just one long piece of code. Well documented but still
+  hard to read.
+  Since I wanted to use an ESP32 I started from scratch.
 
- I started out with having a state NIGHT with no reporting (same as Ralph Bacon) but later decided to remove this state 
- and have reporting for the whole 24 hours. Thingspeak is used to report the number of movements to
+  My Project will run on an ESP32 so therefore use is made of multitasking.
 
- Instead of email I opted to use pushover messages for a daily reporting to a smartphone and iPad.
- 
- The whole thing is built with Adafruit Feather components. I encountered problems with the OLED display. 
- I tried several versions of oled libs, including the one from Adafruit. There seem to be timing problems with the ESP32. See the web - they all
- work well with ESP8266 but not with ESP32.
- Finally I found this lib to work ok, I followed the following description:
- https://techtutorialsx.com/2017/12/02/esp32-arduino-interacting-with-a-ssd1306-oled-display/
- 
- This LIb is used for the OLDE display:
- ESP8266_and_ESP32_OLED_driver_for_SSD1306_displays
- The OLED display is on for 50 sec. It can be switched on for 50 sec. by the press of a button. 
- Another button is used to force the sending of a test pushover message.
- 
- Two led are used: green led simply blinking when the system is running, red led used to show detection of movement.
- 
- 4 Task are used, the task running the setup() is terminated after setup is complete.
- 
- The config file is read from an micro sd card.
- The OLED display is uncluttered, showing simply the state of the last connectin to Thingsspeak and Pushover respectively.
- Pushover can be found here:
-* myPushover Lib on Github
-https://github.com/dakota127/myPushover
-* 
+  The Application is modeled with a State Machine - this is the only clean solution that will prevent lot's of switches which are in fact
+  implementing a state machine the ugly way.
+
+  I also use Adreas Spiess Debug Prepocessor directives (to keep production code small).
+  Check it out here : .https://youtu.be/1eL8dXL3Wow
+
+  I started out with having a state NIGHT with no reporting (same as Ralph Bacon) but later decided to remove this state
+  and have reporting for the whole 24 hours. Thingspeak is used to report the number of movements to
+
+  Instead of email I opted to use pushover messages for a daily reporting to a smartphone and iPad.
+
+  The whole thing is built with Adafruit Feather components. I encountered problems with the OLED display.
+  I tried several versions of oled libs, including the one from Adafruit. There seem to be timing problems with the ESP32. See the web - they all
+  work well with ESP8266 but not with ESP32.
+  Finally I found this lib to work ok, I followed the following description:
+  https://techtutorialsx.com/2017/12/02/esp32-arduino-interacting-with-a-ssd1306-oled-display/
+
+  This LIb is used for the OLDE display:
+  ESP8266_and_ESP32_OLED_driver_for_SSD1306_displays
+  The OLED display is on for 50 sec. It can be switched on for 50 sec. by the press of a button.
+  Another button is used to force the sending of a test pushover message.
+
+  Two led are used: green led simply blinking when the system is running, red led used to show detection of movement.
+
+  4 Task are used, the task running the setup() is terminated after setup is complete.
+
+  The config file is read from an micro sd card.
+  The OLED display is uncluttered, showing simply the state of the last connectin to Thingsspeak and Pushover respectively.
+  Pushover can be found here:
+  myPushover Lib on Github
+  https://github.com/dakota127/myPushover
+
 */
 //----------------------------------------------------------------
 
@@ -105,11 +105,11 @@ static volatile bool clock_tick_2 = false;
 #define TASK_PRIORITY 1
 
 enum {
-    TEST_WIFI,                                      // finite state machins states
-    REPORT_CLOUD,
-    PUSH_MESG
-    };
-    
+  TEST_WIFI,                                      // finite state machins states
+  REPORT_CLOUD,
+  PUSH_MESG
+};
+
 int wifi_todo;
 
 struct wifi_struct {               /// wifi struct
@@ -123,16 +123,16 @@ struct wifi_struct {               /// wifi struct
 
 bool wifiStatus;
 
-WiFiClientSecure  client_push;
+// WiFiClientSecure  client_push;  nicht verwendet
 WiFiClient        client_thing;
 
 //---- State Machine related definitions and variables ----
 enum {
-     // finite state machins states
-    ATHOME,
-    LEAVING,
-    AWAY
-    };
+  // finite state machins states
+  ATHOME,
+  LEAVING,
+  AWAY
+};
 
 uint8_t state = ATHOME;              // state variable is global
 
@@ -141,7 +141,7 @@ static volatile unsigned long movCount_reportingPeriod_cloud = 0;       //  coun
 static volatile unsigned long movCount_reportingPeriod_push = 0;        //  count per reporting period
 
 
-static volatile unsigned long button_awaypressed = 0;
+static volatile unsigned long  button_awaypressed = 0;
 static volatile unsigned long button_oledpressed = 0;
 static volatile time_t timelastMovement ;
 
@@ -168,7 +168,7 @@ struct Config {               /// config struct
   char wlanssid_1[20];
   char wlanpw_1[15];
   char wlanssid_2[20];
-  char wlanpw_2[15];  
+  char wlanpw_2[15];
   char NTPPool[20];
   char Timezone_Info[60];     // enter your time zone (https://remotemonitoringsystems.ca/time-zone-abbreviations.php)
   char Email_1[20];
@@ -182,7 +182,7 @@ struct Config {               /// config struct
   int HoursbetweenNoMovementRep;
   int EveningReportingHour;
   int MorningReportingHour;
- 
+
 };
 char *credentials[] = { "", "", "", "" };
 const char *filename = "/config.json";      // <- SD library uses 8.3 filenames
@@ -204,7 +204,7 @@ unsigned long lastEntryTime;
 char currTime[80];
 String timeStamp;
 
-//boot info 
+//boot info
 char time_lastreset[30];
 int   lastResetreason;
 char  reset_reason[30];
@@ -212,10 +212,10 @@ char  reset_reason[30];
 // time-date stuff
 static volatile int curr_hour;
 static volatile int curr_dayofyear;
-static volatile int curr_year;                  // function returns year since 
+static volatile int curr_year;                  // function returns year since
 static volatile int old_hour;
 static volatile int old_dayofyear;
-static volatile int old_year;                   // function returns year since 
+static volatile int old_year;                   // function returns year since
 static bool done_morningreporting = false;      // have we already done it at the specified hour ?
 static bool done_eveningreporting = false;
 static volatile bool is_newday = false;
@@ -242,8 +242,8 @@ int wifi_func();
 //---- This and that -------------------------------
 
 int debug_flag = false;                 // for output to serial console, is set if DEBUGLEVEL is > 0
-int debug_flag_push = DEBUGPUSH;        // for test push messages  set manually here !!    
-    
+int debug_flag_push = DEBUGPUSH;        // for test push messages  set manually here !!
+
 int pirState = LOW; // we start, assuming no motion detected
 int val = 0; // variable for reading the pin status
 int ret = 0;
@@ -251,10 +251,10 @@ int ret = 0;
 
 //------------------------------------------------
 // displays at startup the Sketch running in the Arduino
-void display_Running_Sketch (void){
+void display_Running_Sketch (void) {
   String the_path = __FILE__;
   int slash_loc = the_path.lastIndexOf('/');
-  String the_cpp_name = the_path.substring(slash_loc+1);
+  String the_cpp_name = the_path.substring(slash_loc + 1);
   int dot_loc = the_cpp_name.lastIndexOf('.');
   String the_sketchname = the_cpp_name.substring(0, dot_loc);
 
@@ -281,61 +281,61 @@ void setup() {
   pinMode(button_awayPin, INPUT_PULLUP);  // declare button as input
   pinMode(button_oledPin, INPUT_PULLUP);  // declare button as input
   pinMode(button_test, INPUT_PULLUP);  // declare button as input
-  
+
   // Semaphores init
   SemaMovement  = xSemaphoreCreateMutex();
   SemaButton    = xSemaphoreCreateMutex();
   SemaOledSignal = xSemaphoreCreateMutex();
   wifi_semaphore = xSemaphoreCreateMutex();
-  
+
   clock_1Semaphore = xSemaphoreCreateMutex();
   clock_2Semaphore = xSemaphoreCreateMutex();
-  
+
   Serial.begin(115200);
   vTaskDelay(3000 / portTICK_PERIOD_MS);     // just wait
   display_Running_Sketch();
-  
+
   Serial.print ("CPU0 reset reason: ");
   store_reset_reason(rtc_get_reset_reason(0));
   Serial.println (reset_reason);
   lastResetreason = rtc_get_reset_reason(0);
-  
+
   Serial.print ("CPU1 reset reason: ");
   store_reset_reason(rtc_get_reset_reason(1));
   Serial.println (reset_reason);
-  
-  WiFi.mode(WIFI_STA);   
+
+  WiFi.mode(WIFI_STA);
   if (DEBUGLEVEL > 0) {
     debug_flag = true;                          // some functions need this
     Serial.println("----- debug on ---------");
-   }
+  }
 
   DEBUGPRINTLN1 ("start setup");
 
-//  digitalWrite(redledPin, LOW);             // turn LED OFF
+  //  digitalWrite(redledPin, LOW);             // turn LED OFF
 
 
-  
+
   movCount_reportingPeriod_push = 0;          // no semaphore needed, no other task running
-  
-           
+
+
   DEBUGPRINTLN2 ("about to start task1");
   vTaskDelay(100 / portTICK_PERIOD_MS);     // start oled task first on core 1
 
-// --------- start function do_oled in a separate task -------------------------------------- 
-// parameters to start a task:
-//  (name of task , Stack size of task , parameter of the task , priority of the task , Task handle to keep track of created task , core )
-//
+  // --------- start function do_oled in a separate task --------------------------------------
+  // parameters to start a task:
+  //  (name of task , Stack size of task , parameter of the task , priority of the task , Task handle to keep track of created task , core )
+  //
   xTaskCreatePinnedToCore (task_display, "oledtask", 3000, NULL, TASK_PRIORITY, &Task1, CORE_1);
 
   vTaskDelay(200 / portTICK_PERIOD_MS);
 
   int ret = logInit(path);
 
-// load configdata into struct --------------------------
+  // load configdata into struct --------------------------
   ret = loadConfig(filename, config);       // load config from json file
 
-  WiFi.mode(WIFI_STA);                      // Wifi mode is station          
+  WiFi.mode(WIFI_STA);                      // Wifi mode is station
   ThingSpeak.begin(client_thing);                 // Initialize ThingSpeak
 
   vTaskDelay(200 / portTICK_PERIOD_MS);
@@ -346,65 +346,65 @@ void setup() {
   wifi_order_struct.order = wifi_todo;
   ret = wifi_func();
 
-// init time related stuff
+  // init time related stuff
   curr_hour = timeinfo.tm_hour;
   curr_dayofyear = timeinfo.tm_yday;
-  curr_year = timeinfo.tm_year -100;        // function returns year since 1900
+  curr_year = timeinfo.tm_year - 100;       // function returns year since 1900
   old_dayofyear = curr_dayofyear;
-  old_year = curr_year  ;                   // function returns year since 1900          
+  old_year = curr_year  ;                   // function returns year since 1900
 
-  
+
   strftime(time_lastreset, 30, "%a %d.%m.%y %T", localtime(&now));
   if (debug_flag) {
-    Serial.println(""); 
+    Serial.println("");
     Serial.print ("Boot Time: ");
-    Serial.println(time_lastreset); 
-  }  
-// create other tasks ------------
+    Serial.println(time_lastreset);
+  }
+  // create other tasks ------------
 
-  DEBUGPRINTLN2 ("about to start task2");      // clock 
-//  task can only be started after time is available...
+  DEBUGPRINTLN2 ("about to start task2");      // clock
+  //  task can only be started after time is available...
   vTaskDelay(100 / portTICK_PERIOD_MS);
-  xTaskCreatePinnedToCore ( task_clock,"clock", 5000, NULL, TASK_PRIORITY, &Task2, CORE_1);
+  xTaskCreatePinnedToCore ( task_clock, "clock", 5000, NULL, TASK_PRIORITY, &Task2, CORE_1);
 
   vTaskDelay(200 / portTICK_PERIOD_MS);
 
-   DEBUGPRINTLN2 ("about to start task3");
-   vTaskDelay(200 / portTICK_PERIOD_MS);
-   xTaskCreatePinnedToCore (task_detect, "Movement", 2000, NULL, TASK_PRIORITY, &Task3, CORE_1);                 
+  DEBUGPRINTLN2 ("about to start task3");
+  vTaskDelay(200 / portTICK_PERIOD_MS);
+  xTaskCreatePinnedToCore (task_detect, "Movement", 2000, NULL, TASK_PRIORITY, &Task3, CORE_1);
 
-   vTaskDelay(200 / portTICK_PERIOD_MS);
+  vTaskDelay(200 / portTICK_PERIOD_MS);
 
-   DEBUGPRINTLN2 ("about to start task4");
-   vTaskDelay(100 / portTICK_PERIOD_MS);
+  DEBUGPRINTLN2 ("about to start task4");
+  vTaskDelay(100 / portTICK_PERIOD_MS);
 
-// Tast state machine  - the main loop
-   xTaskCreatePinnedToCore ( state_machine, "STM", 10000, NULL, TASK_PRIORITY, &Task4, CORE_1);
+  // Tast state machine  - the main loop
+  xTaskCreatePinnedToCore ( state_machine, "STM", 10000, NULL, TASK_PRIORITY, &Task4, CORE_1);
 
-   vTaskDelay(200 / portTICK_PERIOD_MS);
+  vTaskDelay(200 / portTICK_PERIOD_MS);
 
-// end creating tasks ------------------
-  
+  // end creating tasks ------------------
+
 
   DEBUGPRINTLN1 ("Setup done...");
 
 
-   getTimeStamp();
-   getCurrTime(false); 
-   logMessage = String(currTime) + "," +  "Setup ended" + "\r\n";
-   log_SDCard(logMessage, path);
-   vTaskDelay(700 / portTICK_PERIOD_MS);
-   vTaskDelete(NULL);                    // delete this initial setup task
+  getTimeStamp();
+  getCurrTime(false);
+  logMessage = String(currTime) + "," +  "Setup ended" + "\r\n";
+  log_SDCard(logMessage, path);
+  vTaskDelay(700 / portTICK_PERIOD_MS);
+  vTaskDelete(NULL);                    // delete this initial setup task
 }
 
 
 //----------------------------------------------------
 //  Loop, runs on core 1 by default -------------------
-void loop(){
-  
+void loop() {
+
   delay(1000);
 }
 //--------------------------------------------
-// end of code 
+// end of code
 //--------------------------------------------
 //
