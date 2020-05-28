@@ -15,6 +15,7 @@
 int order;
 int ret_int;       // retcode 0 all is well, >0 = not ok
 bool ret_bool;
+#define WIFI_RETRIES 15
 
 //  wifi function ---------------------------------------
 //--------------------------------------------------------
@@ -64,6 +65,11 @@ int wifi_func ()
       if (ret_int > 5) {
         Serial.println("\t\t\t\t\terror-error-error - no wifi 3");
         value3_oled = 7;
+        getTimeStamp();
+        getCurrTime(false);
+        logMessage = String(currTime) + ",no wifi 3\r\n";
+        log_SDCard(logMessage, path);
+        
       }
       else {
         value3_oled = 1;          // default if push ok
@@ -207,7 +213,7 @@ bool waitForWifi() {
   retries = 0;
   while (WiFi.status() != WL_CONNECTED)  {
     retries++;
-    if (retries > 20) break;      // max number retries
+    if (retries > WIFI_RETRIES) break;      // max number retries
     // Pause the task for 300ms
     vTaskDelay(300 / portTICK_PERIOD_MS);
     DEBUGPRINT2  (".");

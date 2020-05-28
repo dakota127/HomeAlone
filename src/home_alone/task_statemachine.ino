@@ -439,7 +439,7 @@ void morningReporting() {
 
     getTimeStamp();
     getCurrTime(false);
-    logMessage = String(currTime) + ",doing morningreporting ";
+    logMessage = String(currTime) + ",doing morningreporting\r\n";
     log_SDCard(logMessage, path);
 
     // get movement count ----------
