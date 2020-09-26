@@ -166,9 +166,9 @@ struct Config {               /// config struct
   char PersonName [20];
   int MinutesBetweenUploads;
   char wlanssid_1[20];
-  char wlanpw_1[15];
+  char wlanpw_1[25];
   char wlanssid_2[20];
-  char wlanpw_2[15];
+  char wlanpw_2[25];
   char NTPPool[20];
   char Timezone_Info[60];     // enter your time zone (https://remotemonitoringsystems.ca/time-zone-abbreviations.php)
   char Email_1[20];
