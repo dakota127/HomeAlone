@@ -42,7 +42,9 @@ void task_clock ( void * parameter )
 //---------------------------------------------------------------------------------------
 // -----  handle clock_1 (used for upload data to cloud))------------
 //---------------------------------------------------------------------------------------
-
+  
+    if (config.MinutesBetweenUploads > 0) {    // do reporting only if value is > zero
+      
     if (( now - last_time_clock_1) > config.MinutesBetweenUploads ) {   
             
         time(&last_time_clock_1);              // store time 
@@ -57,8 +59,11 @@ void task_clock ( void * parameter )
         Serial.println("\t\tclock1 - Semaphore busy");
         }
 
-    }     
-
+     }     
+  
+    }
+          
+    
        
    vTaskDelay(600 / portTICK_PERIOD_MS);
   }

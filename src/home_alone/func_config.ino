@@ -154,6 +154,7 @@ config.HoursbetweenNoMovementRep =   doc["HoursbetweenNoMovementRep"]; // 30
 
    // Dump config file
 
+
    
    if (debug_flag) {
        config.MinutesBetweenUploads = UPLOAD_INTERVALL_TEST;   // set for debug and test

@@ -53,7 +53,14 @@ int wifi_func ()
         value2_oled = 1;
         ret_int = report_toCloud (wifi_order_struct.mvcount)  ;    // report to thingspeak
         DEBUGPRINT1 ("report_toCloud: "); DEBUGPRINTLN1 (ret_int);  // 0 = ok, 9 = error
-        if (ret_int > 0 ) value2_oled = 5;                           // if not true: was error
+        if (ret_int > 0 ) {
+          value2_oled = 5;   
+          getTimeStamp();
+          getCurrTime(false);
+          logMessage = String(currTime) + ",err thingsspeak\r\n";
+          log_SDCard(logMessage, path);
+        }
+                            // if not true: was error
       }
       break;
 
