@@ -21,7 +21,7 @@
 
 //----------------------------------------------------------------
 // Loads the configuration from a file
-int loadConfig (const char *filename, Config &config) {
+int loadConfig (const char *filename, Config_struct &config) {
 
 // Initialize SD library
   const int chipSelect = 33;
@@ -51,20 +51,23 @@ int loadConfig (const char *filename, Config &config) {
   File file = SD.open("/config.json", FILE_READ);
 
   if (file == 1) Serial.print ("File opened: ");
-  else Serial.print ("File not found: ");
+  else Serial.print ("Error: config File not found: ");
   Serial.println(filename);
 
 // Allocate a temporary JsonDocument
   // Don't forget to change the capacity to match your requirements.
   // Use arduinojson.org/v6/assistant to compute the capacity.
 
-   DynamicJsonDocument doc(1400);
+   DynamicJsonDocument doc(1800);
 
  // Deserialize the JSON document
   DeserializationError error = deserializeJson(doc, file);
   if (error) {
     Serial.print(F("deserializeJson() failed: "));
     Serial.println(error.c_str());
+    Serial.print(F("muss aufhören"));
+    file.close();
+    return (9);
 }
 
  config.ThingSpeakChannelNo = doc["ThingSpeakChannelNo"]; // 
@@ -92,7 +95,7 @@ config.ThingSpeakFieldNo = doc["ThingSpeakFieldNo"]; // 1
           sizeof(config.PushoverToken));         // <- destination's capacity
                              
 config.MinutesBetweenUploads = doc["MinutesBetweenUploads"]; // 14
-config.MinutesBetweenUploads = config.MinutesBetweenUploads * 60;
+config.MinutesBetweenUploads = config.MinutesBetweenUploads * 60;  // calculate seconds
  strlcpy(config.wlanssid_1,                  // <- destination
           doc["SSID_1"] | "example.ch",  // <- source
           sizeof(config.wlanssid_1));         // <- destination's capacity
@@ -104,18 +107,6 @@ config.MinutesBetweenUploads = config.MinutesBetweenUploads * 60;
           doc["Password_1"] | "example.ch",  // <- source
           sizeof(config.wlanpw_1));         // <- destination's capacity
   credentials[1]=  config.wlanpw_1;   
-
-     
-  strlcpy(config.wlanssid_2,                  // <- destination
-          doc["SSID_2"] | "example.ch",  // <- source
-          sizeof(config.wlanssid_2));         // <- destination's capacity
-  credentials[2]=  config.wlanssid_2;    
-
-     
-  strlcpy(config.wlanpw_2,                  // <- destination
-          doc["Password_2"] | "example.ch",  // <- source
-          sizeof(config.wlanpw_2));         // <- destination's capacity
-   credentials[3]=  config.wlanpw_2;        
 
   
   strlcpy(config.Timezone_Info,                  // <- destination
@@ -138,41 +129,35 @@ config.MinutesBetweenUploads = config.MinutesBetweenUploads * 60;
           doc["PushoverDevices"] | "example.ch",  // <- source
           sizeof(config.PushoverDevices));         // <- destination's capacity
   
-
-
-
 config.TimeOutLeavingSec = doc["TimeOutLeavingSec"]; // 30
 config.MaxActivityCount = doc["MaxActivityCount"]; // 25
 config.ScreenTimeOutSeconds = doc["ScreenTimeOutSeconds"]; // 30
-
 config.EveningReportingHour = doc["EveningReportingHour"]; // 30
-config.MorningReportingHour = doc["MorningReportingHour"]; // 30
 config.HoursbetweenNoMovementRep =   doc["HoursbetweenNoMovementRep"]; // 30
-
+config.EssentialDebug =   doc["EssentialDebug"]; // 0 oder 1
   // Close the file (Curiously, File's destructor doesn't close the file)
   file.close();
 
    // Dump config file
 
+  if (essential_debug) Serial.println ("Config read ok") ;
 
-   
+  // set smaller values if we are debugging.....
    if (debug_flag) {
+      Serial.println ("Debug is ON, set new values for timeouts <----------");
        config.MinutesBetweenUploads = UPLOAD_INTERVALL_TEST;   // set for debug and test
        config.TimeOutLeavingSec = STATE_LEAVE_TEST;          // in seconds for test debug
        config.HoursbetweenNoMovementRep = 3;
        config.EveningReportingHour = 20;
-   
        printFile(filename);
       }
 
-   //   config.MorningReportingHour = 14;
-  //   config.EveningReportingHour = 23;
-  /*    
-    if (debug_flag_push)            // do this whenever we test important functions
-      config.HoursbetweenNoMovementRep = HOURSBETWEENNOMOV;
-  */
-      
-     printConfig();           // do this every time
+   //   config.EveningReportingHour = 23;
+
+
+      if (essential_debug) printConfig();           // do this if requested
+
+     return(0);
 }
 //--------------------------------------------------------------------
 
@@ -204,7 +189,7 @@ void printFile(const char *filename) {
 void printConfig() {    
 
 
- Serial.println ("Values: ");
+  Serial.println ("Values in configstruct: ");
   Serial.println (config.ThingSpeakChannelNo);
   Serial.println (config.ThingSpeakFieldNo);
   Serial.println (config.ThingSpeakWriteAPIKey);
@@ -213,8 +198,6 @@ void printConfig() {
   Serial.println (config.MinutesBetweenUploads);
   Serial.println (config.wlanssid_1);
   Serial.println (config.wlanpw_1);
-  Serial.println (config.wlanssid_2);
-  Serial.println (config.wlanpw_2);
    Serial.println (config.NTPPool);
   Serial.println (config.Timezone_Info);
   Serial.println (config.Email_1);
@@ -229,11 +212,11 @@ void printConfig() {
   Serial.println (config.PushoverDevices);
   Serial.println (config.HoursbetweenNoMovementRep);
   Serial.println (config.EveningReportingHour);
-  Serial.println (config.MorningReportingHour);
+  Serial.println (config.EssentialDebug);
   Serial.println ("--------------------");
   
   Serial.println ("credentials:");
-  for (int i=0; i < 4; i++) {
+  for (int i=0; i < 2; i++) {
    Serial.println(credentials[i]);
   }
   Serial.println ("--------------------");
