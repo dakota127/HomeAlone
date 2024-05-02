@@ -25,6 +25,10 @@ void task_detect(void* parameter) {
       vTaskDelay(200 / portTICK_PERIOD_MS);
     }
 
+  // if we have movement we increment three counters:
+  // counter_1: movemnts to report to thingspeak every intervall (usually 90 minutes)
+  // counter_2: movements beetween daily reporting to pushover
+  // counter_3: movements that results in a alert pushmsg every 24 hours (if no movements)
 
     val = digitalRead(sensorPin);  // read input value PIR sensor
     if (val == HIGH) {             // check if the input is HIGH
@@ -43,19 +47,17 @@ void task_detect(void* parameter) {
 
         // motion has ended, count this movement counter protected by semaphore
         xSemaphoreTake(SemaMovement, portMAX_DELAY);
-        ++movCount_reportingPeriod_cloud;  // thingsSpeak counter, we report a max. of MaxActivityCount Movements
-        if (movCount_reportingPeriod_cloud > config.MaxActivityCount) movCount_reportingPeriod_cloud = config.MaxActivityCount;
-
-        ++movCount_reportingPeriod_push;  // movement within Morning or evening reporting period
+        ++movCount_counter_1;  // thingsSpeak counter, we report a max. of MaxActivityCount Movements
+        ++movCount_counter_2;  // movement within Morning reporting period
         timelastMovement = aktuelle_epochzeit;
         xSemaphoreGive(SemaMovement);
 
 
         if (essential_debug) {
           Serial.print("\tTASK detect - Movement count: ");
-          Serial.print(movCount_reportingPeriod_cloud);
+          Serial.print(movCount_counter_1);
           Serial.print(" / ");
-          Serial.print(movCount_reportingPeriod_push);
+          Serial.print(movCount_counter_2);
           Serial.print(" - ");
           Serial.println(timelastMovement);
         }

@@ -16,8 +16,8 @@ static bool away_first_time = true;     // first_time run through a state, bitwi
 static bool athome_first_time = true;   // first_time run through a state, bitwise, bit 0 means state 1
 static bool leaving_first_time = true;  // first_time run through a state, bitwise, bit 0 means state 1
 
-int mvcount_temp_push;
-int mvcount_temp_cloud;
+int movCount_counter_1_temp;
+int movCount_counter_2_temp;
 bool do_report = false;
 int number_of_tries_eveningreporting = 0;
 
@@ -48,7 +48,8 @@ void state_machine(void* parameter) {
       state = ATHOME;  // initial state of state machine
     }
 
-    // stuff we do irrelevant of state --------
+    // ---------------------------------------
+    // stuff we do irrespective of the state --------
 
     // get current date info --------
     time(&aktuelle_epochzeit);
@@ -64,8 +65,7 @@ void state_machine(void* parameter) {
       do_report = true;
       // get movement count and time last movement ----------
       xSemaphoreTake(SemaMovement, portMAX_DELAY);
-      mvcount_temp_cloud = movCount_reportingPeriod_cloud;
-      timelastmv = timelastMovement;
+      movCount_counter_1_temp = movCount_counter_1;
       xSemaphoreGive(SemaMovement);
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
@@ -73,27 +73,45 @@ void state_machine(void* parameter) {
 
 
 if (do_report) {
-    DEBUGPRINT1("\t\tTASK state_machine trying to report to cloud, count:  ");
-    DEBUGPRINTLN1(mvcount_temp_cloud);
+
+    // cap number of movements
+    if (movCount_counter_1_temp > config.MaxActivityCount) movCount_counter_1_temp = config.MaxActivityCount;
+    DEBUGPRINT1("\t\tTASK state_machine trying to report to thingspeak, count:  ");
+    DEBUGPRINTLN1(movCount_counter_1_temp);
+
     do_report = false;
     // set up parameter for this job
     wifi_todo = THINGSPEAK;
     wifi_order_struct.order = wifi_todo;
-    wifi_order_struct.mvcount = mvcount_temp_cloud;
+    wifi_order_struct.mvcount = movCount_counter_1_temp;
     retcode = wifi_func();
     DEBUGPRINT2("\t\tTASK state_machine wifi_func returns: ");
     DEBUGPRINTLN2(retcode);
     vTaskDelay(200 / portTICK_PERIOD_MS);
     if (retcode == 0) {  // reset count if ok
       xSemaphoreTake(SemaMovement, portMAX_DELAY);
-      movCount_reportingPeriod_cloud = 0;
+      movCount_counter_1 = 0;
       xSemaphoreGive(SemaMovement);
     }
 }
-    
+//  if no movements during the last 24 hours -> send pushover msg
+  if ((aktuelle_epochzeit - timelastMovement) >= (config.HoursbetweenNoMovementRep * 3600 * alert_reporting_counter)) {
+    ++alert_reporting_counter;
+    DEBUGPRINTLN1("\t\tTASK state_machine alert message (no movements)");
+    // assemble string to be displayed
+    sprintf(bufpush, "Keine Bewegung in den letzten %d Stunden", config.HoursbetweenNoMovementRep);
 
-    // state machine implementation starts here ----------------------
-    // switch according to state variable
+    // push alert message ------------
+    retcode = push_msg(bufpush, 1);  // High priority message  in red
+    DEBUGPRINT1("\t\tTASK state_machine push_msg() returns: ");
+    DEBUGPRINTLN1(retcode);
+  }
+
+// end of general stuff that we do in all states
+//-----------------------------------------------
+//
+// state machine implementation starts here ----------------------
+// switch according to state variable
 
     vTaskDelay(200 / portTICK_PERIOD_MS);
     switch (state) {
@@ -159,22 +177,19 @@ void do_athome() {
 
     // get movement count
     xSemaphoreTake(SemaMovement, portMAX_DELAY);
-    mvcount_temp_push = movCount_reportingPeriod_push;  // HOLE TOTAL ANZAHL MOVEMENTS
+    movCount_counter_2_temp = movCount_counter_2;  // HOLE TOTAL ANZAHL MOVEMENTS
     xSemaphoreGive(SemaMovement);
 
-    sprintf(bufpush, "Testmeldung, Last Reset: %s count: %d   ", time_lastreset, mvcount_temp_push);
+    sprintf(bufpush, "Testmeldung, Last Reset: %s count: %d   ", time_lastreset, movCount_counter_2_temp);
     retcode = push_msg(bufpush, 1);  // use priority 1 HIGH
     DEBUGPRINT1("\t\tTASK state_machine push_msg() returns: ");
     DEBUGPRINTLN1(retcode);
     vTaskDelay(400 / portTICK_PERIOD_MS);
   }
 
-  //  check movementens in the last n hours .....
-  xSemaphoreTake(SemaMovement, portMAX_DELAY);
-  timelastmv = timelastMovement;
-  xSemaphoreGive(SemaMovement);
 
 
+/*
   if ((aktuelle_epochzeit - timelastmv) >= (config.HoursbetweenNoMovementRep * 3600)) {
     DEBUGPRINTLN1("\t\tTASK state_machine no movement for the last period");
     // assemble string to be displayed
@@ -188,6 +203,7 @@ void do_athome() {
     timelastMovement = aktuelle_epochzeit;
     xSemaphoreGive(SemaMovement);
   }
+*/
 
   // have we reached evening reporting hour yet ?
   if (config.EveningReportingHour > 0) {
@@ -222,9 +238,9 @@ void do_away() {
   // if so we switch to state ATHOME ------------------
   // and send pushover that target is at home again
   xSemaphoreTake(SemaMovement, portMAX_DELAY);
-  mvcount_temp_cloud = movCount_reportingPeriod_cloud;
+  movCount_counter_1_temp = movCount_counter_1;
   xSemaphoreGive(SemaMovement);
-  if (mvcount_temp_cloud > 0) {
+  if (movCount_counter_1_temp > 0) {
     state = ATHOME;
     away_first_time = true;
     athome_first_time = true;
@@ -262,8 +278,8 @@ void do_leaving() {
     DEBUGPRINT1("\t\tTASK state_machine push_msg() returns: ");
     DEBUGPRINTLN1(retcode);
     xSemaphoreTake(SemaMovement, portMAX_DELAY);
-    movCount_reportingPeriod_cloud = 0;
-    movCount_reportingPeriod_push = 0;
+    movCount_counter_1 = 0;
+    movCount_counter_2 = 0;
     xSemaphoreGive(SemaMovement);
 
     vTaskDelay(400 / portTICK_PERIOD_MS);
@@ -276,7 +292,7 @@ void do_leaving() {
   if ((now_3 - leaving_start) > (config.TimeOutLeavingSec)) {  // ok, we leave this state
     //  Serial.println ( now_3 - leaving_start);
     xSemaphoreTake(SemaMovement, portMAX_DELAY);
-    movCount_reportingPeriod_cloud = 0;
+    movCount_counter_1 = 0;
     xSemaphoreGive(SemaMovement);
     state = AWAY;
     away_first_time = true;
@@ -304,10 +320,10 @@ void eveningReporting() {
 
       // get movement count ----------
       xSemaphoreTake(SemaMovement, portMAX_DELAY);
-      mvcount_temp_push = movCount_reportingPeriod_push;
+      movCount_counter_2_temp = movCount_counter_2;
       xSemaphoreGive(SemaMovement);
 
-      sprintf(bufpush, "Gute Nacht, Anzahl Bewegungen seit Gestern: %d   ", mvcount_temp_push);
+      sprintf(bufpush, "Gute Nacht, Anzahl Bewegungen seit Gestern: %d   ", movCount_counter_2_temp);
 
       // push evening message ------------
       retcode = push_msg(bufpush, 0);  // prio zero
@@ -318,7 +334,7 @@ void eveningReporting() {
       // if still not ok, forget it and set done_eveningreporting to true.
       if (retcode == 0) {
         xSemaphoreTake(SemaMovement, portMAX_DELAY);
-        movCount_reportingPeriod_push = 0;  // clear counter movements total
+        movCount_counter_2 = 0;  // clear counter movements total
         xSemaphoreGive(SemaMovement);
         done_eveningreporting = true;
         number_of_tries_eveningreporting = 0;

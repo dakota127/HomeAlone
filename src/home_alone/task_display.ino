@@ -23,6 +23,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Fonts/FreeSans9pt7b.h>
+#include "home_alone.h"
 
 Adafruit_SSD1306 display = Adafruit_SSD1306(128, 32, &Wire);
 
@@ -30,9 +31,9 @@ Adafruit_SSD1306 display = Adafruit_SSD1306(128, 32, &Wire);
 // Optionally include custom images
 #include "images.h"
 
-time_t display_on;
+static time_t display_on;
 time_t now_1;
-int update_oled;
+enum display_show update_oled;
 char oled_buf[20];
 String person2string;
 bool display_state = false;
@@ -41,7 +42,7 @@ char state_display[] = { 'x', 'H', 'L', 'A', 'N', 'E', '\0' };
 
 // LED stuff
 
-const long interval = 1000;        // interval at which to blink (milliseconds)
+const long interval = 1000;  // interval at which to blink (milliseconds)
 
 unsigned long currentMillis = millis();
 int greenledState = LOW;  // ledState used to set the LED
@@ -49,6 +50,7 @@ int greenledState = LOW;  // ledState used to set the LED
 //-----------------------------------
 void show_display() {
   // Serial.println (oled_buf);
+  DEBUGPRINTLN1("Display ON");
   display.clearDisplay();
   display.display();  // actually display all of the above
   display.setFont();
@@ -58,11 +60,9 @@ void show_display() {
   display.setFont(&FreeSans9pt7b);
   display.setTextColor(WHITE);
   display.setCursor(12, 30);
+  display.println(oled_buf);  // show
 
-  //display.println("9  9  1  H 123");
-  display.println(oled_buf);
 
-  DEBUGPRINTLN1 ("Display ON");
   //    display.displayOn();
   display.display();  // actually display all of the above
   delay(200);
@@ -89,29 +89,29 @@ void task_display(void* parameter) {
       oled_first_time = false;
       display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // Address 0x3C for 128x32
       delay(50);
-      if (debug_flag > 0) config.ScreenTimeOutSeconds += 20;  // increase display on time if debug is on
+
       DEBUGPRINT1("\t\t\tTASK display -  - First done");
       // nothing else to do ....
     }  // end first time .......
 
 
-    person2string = config.PersonName;
+    person2string = config.PersonName;  // name of target person
 
     // if another task wants to switch oled on, the oled signal will be set to > 0
     xSemaphoreTake(SemaOledSignal, portMAX_DELAY);  // signal oled task to switch display on
     if (oledsignal > NOSHOW) {
-    update_oled = oledsignal;                       // take over the value
-    oledsignal = NOSHOW;
+      update_oled = oledsignal;  // take over the value
+      oledsignal = NOSHOW;
     }
     xSemaphoreGive(SemaOledSignal);
 
-  
+
     // what do we need to display?
-    
+
     switch (update_oled) {
-      
+
       case NORMAL:
-        sprintf(oled_buf, "%d %d %d %c  %d", value1_oled, value2_oled, value3_oled, state_display[value4_oled], movCount_reportingPeriod_cloud);
+        sprintf(oled_buf, "%d %d %d %c  %d", value1_oled, value2_oled, value3_oled, state_display[value4_oled], movCount_counter_1);
         break;
       case ZEIT:
         sprintf(oled_buf, "%s", "WARTE ZEIT ");
@@ -145,24 +145,31 @@ void task_display(void* parameter) {
       update_oled = NOSHOW;
     }
 
-    if (display_state) {  // if display is on
-      time(&now_1);
-      if ((now_1 - display_on) > config.ScreenTimeOutSeconds) {
-        DEBUGPRINTLN1 ("Display OFF");
-        display.clearDisplay();
-        display.display();
-        display_state = false;
-      }
-    } else {
-      // if anzeige aus ist
-      //  read oled pin: presses means: switch display on for a number of seconds -----------
-      int button_A = digitalRead(button_oledPin);  // read input value
+    // check if OLED can be switched off
+    // but we do this only if display_control is true
+    // this is controlled by the setup function
 
-      if (button_A == LOW) {  // check if the input is LOW
-        DEBUGPRINTLN1("\t\t\tTASK display - button oled pressed");
-        update_oled = NORMAL;  // verlange anzeige einschalten
+    if (display_control) {
+      if (display_state) {  // if display is on
+        time(&now_1);
+        if ((now_1 - display_on) > config.ScreenTimeOutSeconds) {
+          DEBUGPRINTLN1("Display OFF");
+          display.clearDisplay();
+          display.display();
+          display_state = false;
+        }
+      } else {
+        // if anzeige aus ist
+        //  read oled pin: presses means: switch display on for a number of seconds -----------
+        int button_A = digitalRead(button_oledPin);  // read input value
+
+        if (button_A == LOW) {  // check if the input is LOW
+          DEBUGPRINTLN1("\t\t\tTASK display - button oled pressed");
+          update_oled = NORMAL;  // verlange anzeige einschalten
+        }
       }
     }
+
     // blink green led is done here since display task is the first to run
     // blink green LED -------------------------
     unsigned long currentMillis = millis();

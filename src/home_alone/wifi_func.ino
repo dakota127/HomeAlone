@@ -229,7 +229,7 @@ int wifi_func() {
           value2_oled = 5;
           getTimeStamp();
           getCurrTime(false);
-          logMessage = String(currTime) + ",err thingsspeak\r\n";
+          logMessage = String(currTime_string) + ",err thingsspeak\r\n";
           log_SDCard(logMessage, path);
         }
         // if not true: was error
@@ -248,7 +248,7 @@ int wifi_func() {
         value3_oled = 7;
         getTimeStamp();
         getCurrTime(false);
-        logMessage = String(currTime) + ",no wifi 3\r\n";
+        logMessage = String(currTime_string) + ",no wifi 3\r\n";
         log_SDCard(logMessage, path);
 
       } else {
@@ -310,7 +310,7 @@ int report_toPushover(String messageText, int prio) {
 
   getTimeStamp();
   getCurrTime(false);
-  logMessage = String(currTime) + ",Trying pushover\r\n";
+  logMessage = String(currTime_string) + ",Trying pushover\r\n";
   log_SDCard(logMessage, path);
 
 
@@ -410,9 +410,9 @@ void getCurrTime(bool how) {
 
   delay(200);
 
-  if (how) strftime(currTime, 30, "%a  %d-%m-%y %T", localtime(&aktuelle_epochzeit));
-  else strftime(currTime, 30, "%d-%m-%y %H:%M:%S", localtime(&aktuelle_epochzeit));
-  DEBUGPRINTLN3(currTime);
+  if (how) strftime(currTime_string, 30, "%a  %d-%m-%y %T", localtime(&aktuelle_epochzeit));
+  else strftime(currTime_string, 30, "%d-%m-%y %H:%M:%S", localtime(&aktuelle_epochzeit));
+  DEBUGPRINTLN3(currTime_string);
 }
 
 //----------------------------------------------

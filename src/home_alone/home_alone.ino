@@ -44,8 +44,10 @@
 //----------------------------------------------------------------
 
 // degugging stuff ------------------------------
-#define DEBUGLEVEL 0  // für Debug Output, for production set this to DEBUGLEVEL 0  <---------------------------
-
+// set this to 1, 2 or 3 for increasing debug output
+// set this to 0 for production
+#define DEBUGLEVEL 0  // controls Debug Output  <---------------------------
+// ----------------------------------------------------------
 #include <time.h>
 #include <WiFi.h>              // used for thingspeak
 #include <WiFiClientSecure.h>  // used for pushover
@@ -114,10 +116,10 @@ enum machine_states {
 };
 enum machine_states state;  // state variable is global
 
-//---- communication between tasks ----------------
-static volatile unsigned long movCount_reportingPeriod_cloud = 0;  //  count per reporting period
-static volatile unsigned long movCount_reportingPeriod_push = 0;   //  count per reporting period
-
+//---- Movement Counters global ----------------
+static volatile unsigned long movCount_counter_1 = 0;  //  count per reporting period
+static volatile unsigned long movCount_counter_2 = 0;   //  count per daily reporting
+static volatile unsigned long alert_reporting_counter = 1;   //  number of alert messages
 
 static volatile unsigned long button_awaypressed = 0;
 static volatile unsigned long button_oledpressed = 0;
@@ -169,14 +171,14 @@ const char *filename = "/config.json";  // <- SD library uses 8.3 filenames
 const char *path = "/log.txt";  // logfile on sd card
 String logMessage;
 char buffer1[80];
+static bool display_control = false;
 
 
 //---- Time related definitions and variables ----
 tm timeinfo;
 time_t aktuelle_epochzeit;
-//long unsigned lastNTPtime;
 unsigned long lastEntryTime;
-char currTime[80];
+char currTime_string[80];
 String timeStamp;
 
 struct tm timestrukt;
@@ -188,13 +190,7 @@ bool essential_debug = false;  // value read from config file
 
 // time-date stuff
 static volatile int curr_hour;
-static volatile int curr_dayofyear;
-static volatile int curr_year;  // function returns year since
-static volatile int old_hour;
-static volatile int old_dayofyear;
-static volatile int old_year;               // function returns year since
 static bool done_eveningreporting = false;
-static volatile bool is_newday = false;
 
 
 //---- Function Prototypes -----------------------
@@ -277,7 +273,7 @@ void setup() {
 
   digitalWrite(redledPin, LOW);  // turn LED OFF
 
-  movCount_reportingPeriod_push = 0;  // no semaphore needed, no other task running
+  movCount_counter_2 = 0;  // no semaphore needed, no other task running
 
   if (essential_debug) Serial.println("about to start task1 (display)");
   vTaskDelay(100 / portTICK_PERIOD_MS);  // start oled task first on core 1
@@ -345,14 +341,17 @@ void setup() {
   oledsignal = ZEIT;                              // oled task should display the text ZEIT
   xSemaphoreGive(SemaOledSignal);
 
+// we need to wait until NPT Time is available
   while (!rett) {
     rett = getLocalTime(&timestrukt, 15);
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     //  Serial.println("getLocalTime() returns false");
   }
-
-  value1_oled = NORMAL;  // oled task should display the normal text
-                         // init time related stuf
+// finally we have everything togehter: wifi is ok, time is valid
+// let's roll....
+  xSemaphoreTake(SemaOledSignal, portMAX_DELAY);  // signal oled task to switch display on
+  oledsignal = NORMAL;                              // oled task should display the text ZEIT
+  xSemaphoreGive(SemaOledSignal);
 
 
   time(&aktuelle_epochzeit);  // get epoch time for the first time..... this needs to be here
@@ -363,20 +362,17 @@ void setup() {
     Serial.println(buffer1);
     Serial.println(aktuelle_epochzeit);
   }
-  // set date info
-  curr_hour = 99;  // this a bad hack to prevent statemaching to do morningreporting after a boot during the day...
-  curr_dayofyear = timeinfo.tm_yday;
-  curr_year = timeinfo.tm_year - 100;  // function returns year since 1900
-  old_dayofyear = curr_dayofyear;
-  old_year = curr_year;  // function returns year since 1900
 
+// time stuff 
   getTimeStamp();
   getCurrTime(false);
-  sprintf(time_lastreset, "%s", currTime);
+  sprintf(time_lastreset, "%s", currTime_string);
   if (essential_debug) {
     Serial.print("Boot Time: ");
     Serial.println(time_lastreset);
   }
+
+  display_control = true;             // now that time is valid, we can enable correct display OFF
   DEBUGPRINT1("Setup done, Dauer (ms): ");
         DEBUGPRINTLN1(millis() - previousMillis);
 
@@ -401,8 +397,8 @@ void setup() {
   // end creating tasks ------------------
 
   // do a log entry
-  // currTime already set
-  logMessage = String(currTime) + "," + "Setup ended" + "\r\n";
+  // currTime_string already set
+  logMessage = String(currTime_string) + "," + "Setup ended" + "\r\n";
   log_SDCard(logMessage, path);
 
   if (essential_debug) Serial.println(logMessage);

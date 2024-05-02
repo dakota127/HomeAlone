@@ -152,8 +152,6 @@ config.EssentialDebug =   doc["EssentialDebug"]; // 0 oder 1
        printFile(filename);
       }
 
-   //   config.EveningReportingHour = 23;
-
 
       if (essential_debug) printConfig();           // do this if requested
 
