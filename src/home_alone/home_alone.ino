@@ -129,8 +129,8 @@ static volatile time_t timelastMovement;
 // 3 variable for Oled display
 static volatile int value1_oled = 9;  // 1 if at least one wifi connection was successful
 static volatile int value2_oled = 9;  // last wifi connection: 1 was ok, 7 was not successful
-static volatile int value3_oled = 9;  // last report to cloud: 1 was ok, 7 was not successful
-static volatile int value4_oled = 5;  // 1 = at home, 2= leaving, 3: away , 4 : night, 5: init
+static volatile int value3_oled = 9;  // last report to thingspeak: 1 was ok, 7 was not successful
+static volatile int value4_oled = 5;  // 1 = at home, 2= leaving, 3: away 
 static volatile int value5_oled = 0;  // movement count
 
 enum display_show oledsignal;  // used to signal to the display task
@@ -329,6 +329,8 @@ void setup() {
     delay(7000);
     ESP.restart();
   }
+
+  value1_oled = 1;  // 1 if at least one wifi connection was successful
 
   // wifi ist ok, nun Lokale Zeit holen (NTP)
 
