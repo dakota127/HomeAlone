@@ -19,6 +19,7 @@
   "PushoverDevices" :   "youriphone",
   "HoursbetweenNoMovementRep" : 24,
   "EveningReportingHour" : 21,
-  "EssentialDebug" : 1
+  "EssentialDebug" : 1,
+  "LeaveReporting" : 1
 
 }

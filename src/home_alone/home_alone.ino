@@ -117,9 +117,15 @@ enum machine_states {
 enum machine_states state;  // state variable is global
 
 //---- Movement Counters global ----------------
-static volatile unsigned long movCount_counter_1 = 0;  //  count per reporting period
-static volatile unsigned long movCount_counter_2 = 0;   //  count per daily reporting
-static volatile unsigned long alert_reporting_counter = 1;   //  number of alert messages
+static volatile unsigned long movCount_counter_1 = 0;       //  count per reporting period
+static volatile unsigned long movCount_counter_2 = 0;       //  count per daily reporting
+static volatile unsigned long alert_reporting_counter = 1;  //  number of alert messages
+
+// reporting counters global --------------------
+static volatile unsigned long number_thingspeak_ok = 0;       // how many good reportings to thingspeak
+static volatile unsigned long number_thingspeak_notok = 0;    // how man attempts (did not go ok)
+static volatile unsigned long number_pushover_ok = 0;         // how many good pushover msg
+static volatile unsigned long number_pushover_notok = 0;      // how man attempts (did not go ok)
 
 static volatile unsigned long button_awaypressed = 0;
 static volatile unsigned long button_oledpressed = 0;
@@ -130,7 +136,7 @@ static volatile time_t timelastMovement;
 static volatile int value1_oled = 9;  // 1 if at least one wifi connection was successful
 static volatile int value2_oled = 9;  // last wifi connection: 1 was ok, 7 was not successful
 static volatile int value3_oled = 9;  // last report to thingspeak: 1 was ok, 7 was not successful
-static volatile int value4_oled = 5;  // 1 = at home, 2= leaving, 3: away 
+static volatile int value4_oled = 5;  // 1 = at home, 2= leaving, 3: away
 static volatile int value5_oled = 0;  // movement count
 
 enum display_show oledsignal;  // used to signal to the display task
@@ -159,7 +165,8 @@ struct Config_struct {             /// config struct
   char PushoverDevices[30];        // Devices Pushover
   int HoursbetweenNoMovementRep;   // How many hours between no movements
   int EveningReportingHour;        // Time for eveneing reporting
-  int EssentialDebug;
+  int EssentialDebug;               // debug to Serial, essential stuff
+  int LeaveReporting;               // report leaving the house (1: yes, 0: no)
 };
 
 Config_struct config;  // <- global configuration object of type config
@@ -186,7 +193,7 @@ struct tm timestrukt;
 char time_lastreset[30];
 
 bool essential_debug = false;  // value read from config file
-
+int returncode;
 
 // time-date stuff
 static volatile int curr_hour;
@@ -211,9 +218,9 @@ int wifi_func();
 
 //---- This and that -------------------------------
 
-int debug_flag = false;           // for output to serial console, is set if DEBUGLEVEL is > 1
-int pirState = LOW;  // we start, assuming no motion detected
-int val = 0;         // variable for reading the pin status
+int debug_flag = false;  // for output to serial console, is set if DEBUGLEVEL is > 1
+int pirState = LOW;      // we start, assuming no motion detected
+int val = 0;             // variable for reading the pin status
 int ret = 0;
 
 
@@ -264,8 +271,8 @@ void setup() {
   clock_2Semaphore = xSemaphoreCreateMutex();
 
   state = ATHOME;
- previousMillis = millis();  // note millis, might be used later...
-  delay(1000);  //  do not rush things
+  previousMillis = millis();  // note millis, might be used later...
+  delay(1000);                //  do not rush things
   if (DEBUGLEVEL > 1) {
     debug_flag = true;  // some functions need this
     Serial.println("----- debug on ---------");
@@ -343,29 +350,38 @@ void setup() {
   oledsignal = ZEIT;                              // oled task should display the text ZEIT
   xSemaphoreGive(SemaOledSignal);
 
-// we need to wait until NPT Time is available
+  // we need to wait until NPT Time is available
   while (!rett) {
     rett = getLocalTime(&timestrukt, 15);
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     //  Serial.println("getLocalTime() returns false");
   }
-// finally we have everything togehter: wifi is ok, time is valid
-// let's roll....
+  //----------------------------------------------------------
+  // finally we have everything togehter: wifi is ok, time is valid
+  // let's roll....
   xSemaphoreTake(SemaOledSignal, portMAX_DELAY);  // signal oled task to switch display on
-  oledsignal = NORMAL;                              // oled task should display the text ZEIT
+  oledsignal = NORMAL;                            // oled task should display the text ZEIT
   xSemaphoreGive(SemaOledSignal);
-
 
   time(&aktuelle_epochzeit);  // get epoch time for the first time..... this needs to be here
 
+
+  // sende pushover meldung nach geglücktem reboot....
+  strftime(buffer1, sizeof(buffer1), "BOOT ESP32: %d/%m/%Y %H:%M:%S", &timestrukt);  // fill buffer with date/time
+  //sprintf(bufpush, "Boot ESP32 ---------------");
+  returncode = push_msg(buffer1, 1);  // use priority 1 HIGH
+  DEBUGPRINT1("\t\tTASK state_machine push_msg() returns: ");
+  DEBUGPRINTLN1(returncode);
+  vTaskDelay(400 / portTICK_PERIOD_MS);
+
   if (debug_flag) {  // print some time Info if debug
     Serial.println(asctime(&timestrukt));
-    strftime(buffer1, sizeof(buffer1), "%d/%m/%Y %H:%M:%S", &timestrukt);
+    strftime(buffer1, sizeof(buffer1), "%d/%m/%Y %H:%M:%S", &timestrukt);  // fill buffer with date/time
     Serial.println(buffer1);
     Serial.println(aktuelle_epochzeit);
   }
 
-// time stuff 
+  // time stuff
   getTimeStamp();
   getCurrTime(false);
   sprintf(time_lastreset, "%s", currTime_string);
@@ -374,9 +390,9 @@ void setup() {
     Serial.println(time_lastreset);
   }
 
-  display_control = true;             // now that time is valid, we can enable correct display OFF
+  display_control = true;  // now that time is valid, we can enable correct display OFF
   DEBUGPRINT1("Setup done, Dauer (ms): ");
-        DEBUGPRINTLN1(millis() - previousMillis);
+  DEBUGPRINTLN1(millis() - previousMillis);
 
   // create other tasks ------------
 

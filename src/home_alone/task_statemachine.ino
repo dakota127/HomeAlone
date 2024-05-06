@@ -11,6 +11,7 @@
   -------------------------------------------------------------------
 */
 
+#include "home_alone.h"
 
 static bool away_first_time = true;     // first_time run through a state, bitwise, bit 0 means state 1
 static bool athome_first_time = true;   // first_time run through a state, bitwise, bit 0 means state 1
@@ -26,7 +27,7 @@ time_t leaving_start;  // leave state leaving after n min
 time_t now_3;          // time for leaving
 #define WAIT_TO_REPORT 10000
 
-char bufpush[80];
+
 
 int retcode;
 int timelastmv;
@@ -72,46 +73,46 @@ void state_machine(void* parameter) {
     xSemaphoreGive(clock_1Semaphore);  // release semaphore
 
 
-if (do_report) {
+    if (do_report) {
 
-    // cap number of movements
-    if (movCount_counter_1_temp > config.MaxActivityCount) movCount_counter_1_temp = config.MaxActivityCount;
-    DEBUGPRINT1("\t\tTASK state_machine trying to report to thingspeak, count:  ");
-    DEBUGPRINTLN1(movCount_counter_1_temp);
+      // cap number of movements
+      if (movCount_counter_1_temp > config.MaxActivityCount) movCount_counter_1_temp = config.MaxActivityCount;
+      DEBUGPRINT1("\t\tTASK state_machine trying to report to thingspeak, count:  ");
+      DEBUGPRINTLN1(movCount_counter_1_temp);
 
-    do_report = false;
-    // set up parameter for this job
-    wifi_todo = THINGSPEAK;
-    wifi_order_struct.order = wifi_todo;
-    wifi_order_struct.mvcount = movCount_counter_1_temp;
-    retcode = wifi_func();
-    DEBUGPRINT2("\t\tTASK state_machine wifi_func returns: ");
-    DEBUGPRINTLN2(retcode);
-    vTaskDelay(200 / portTICK_PERIOD_MS);
-    if (retcode == 0) {  // reset count if ok
-      xSemaphoreTake(SemaMovement, portMAX_DELAY);
-      movCount_counter_1 = 0;
-      xSemaphoreGive(SemaMovement);
+      do_report = false;
+      // set up parameter for this job
+      wifi_todo = THINGSPEAK;
+      wifi_order_struct.order = wifi_todo;
+      wifi_order_struct.mvcount = movCount_counter_1_temp;
+      retcode = wifi_func();
+      DEBUGPRINT2("\t\tTASK state_machine wifi_func returns: ");
+      DEBUGPRINTLN2(retcode);
+      vTaskDelay(200 / portTICK_PERIOD_MS);
+      if (retcode == 0) {  // reset count if ok
+        xSemaphoreTake(SemaMovement, portMAX_DELAY);
+        movCount_counter_1 = 0;
+        xSemaphoreGive(SemaMovement);
+      }
     }
-}
-//  if no movements during the last 24 hours -> send pushover msg
-  if ((aktuelle_epochzeit - timelastMovement) >= (config.HoursbetweenNoMovementRep * 3600 * alert_reporting_counter)) {
-    ++alert_reporting_counter;
-    DEBUGPRINTLN1("\t\tTASK state_machine alert message (no movements)");
-    // assemble string to be displayed
-    sprintf(bufpush, "Keine Bewegung in den letzten %d Stunden", config.HoursbetweenNoMovementRep);
+    //  if no movements during the last 24 hours -> send pushover msg
+    if ((aktuelle_epochzeit - timelastMovement) >= (config.HoursbetweenNoMovementRep * 3600 * alert_reporting_counter)) {
+      ++alert_reporting_counter;
+      DEBUGPRINTLN1("\t\tTASK state_machine alert message (no movements)");
+      // assemble string to be displayed
+      sprintf(bufpush, "Keine Bewegung in den letzten %d Stunden", config.HoursbetweenNoMovementRep);
 
-    // push alert message ------------
-    retcode = push_msg(bufpush, 1);  // High priority message  in red
-    DEBUGPRINT1("\t\tTASK state_machine push_msg() returns: ");
-    DEBUGPRINTLN1(retcode);
-  }
+      // push alert message ------------
+      retcode = push_msg(bufpush, 1);  // High priority message  in red
+      DEBUGPRINT1("\t\tTASK state_machine push_msg() returns: ");
+      DEBUGPRINTLN1(retcode);
+    }
 
-// end of general stuff that we do in all states
-//-----------------------------------------------
-//
-// state machine implementation starts here ----------------------
-// switch according to state variable
+    // end of general stuff that we do in all states
+    //-----------------------------------------------
+    //
+    // state machine implementation starts here ----------------------
+    // switch according to state variable
 
     vTaskDelay(200 / portTICK_PERIOD_MS);
     switch (state) {
@@ -180,7 +181,16 @@ void do_athome() {
     movCount_counter_2_temp = movCount_counter_2;  // HOLE TOTAL ANZAHL MOVEMENTS
     xSemaphoreGive(SemaMovement);
 
-    sprintf(bufpush, "Testmeldung, Last Reset: %s count: %d   ", time_lastreset, movCount_counter_2_temp);
+    /*   for testing --- fill random number
+    number_thingspeak_ok = 2345;
+    number_thingspeak_notok = 12;
+    number_pushover_ok  = 890;
+    number_pushover_notok = 11;
+    movCount_counter_2_temp = 1389 ;
+
+   */
+    sprintf(bufpush, "Test: Last Reset: %s counters: %d, %d/%d, %d/%d ", time_lastreset, movCount_counter_2_temp, number_thingspeak_ok,
+            number_thingspeak_notok, number_pushover_ok, number_pushover_notok);
     retcode = push_msg(bufpush, 1);  // use priority 1 HIGH
     DEBUGPRINT1("\t\tTASK state_machine push_msg() returns: ");
     DEBUGPRINTLN1(retcode);
@@ -189,7 +199,7 @@ void do_athome() {
 
 
 
-/*
+  /*
   if ((aktuelle_epochzeit - timelastmv) >= (config.HoursbetweenNoMovementRep * 3600)) {
     DEBUGPRINTLN1("\t\tTASK state_machine no movement for the last period");
     // assemble string to be displayed
@@ -241,14 +251,17 @@ void do_away() {
   movCount_counter_1_temp = movCount_counter_1;
   xSemaphoreGive(SemaMovement);
   if (movCount_counter_1_temp > 0) {
-    state = ATHOME;
+    state = ATHOME;             // change state: next state ATHOME
     away_first_time = true;
     athome_first_time = true;
-    DEBUGPRINTLN2("\t\tTASK state_machine away movement count > 0 leaving state away ");
-    sprintf(bufpush, "Bewohner wieder daheim");
-    retcode = push_msg(bufpush, 0);  // use priority 1 HIGH
-    DEBUGPRINT1("\t\tTASK state_machine push_msg() returns: ");
-    DEBUGPRINTLN1(retcode);
+
+    if (config.LeaveReporting == 1) {             // only if required by config
+      DEBUGPRINTLN2("\t\tTASK state_machine away movement count > 0 leaving state away ");
+      sprintf(bufpush, "Bewohner wieder daheim");
+      retcode = push_msg(bufpush, 0);  // use priority 1 HIGH
+      DEBUGPRINT1("\t\tTASK state_machine push_msg() returns: ");
+      DEBUGPRINTLN1(retcode);
+    }
   }
 
   vTaskDelay(300 / portTICK_PERIOD_MS);
@@ -273,16 +286,16 @@ void do_leaving() {
 
     time(&leaving_start);
 
-    sprintf(bufpush, "Bewohner verlässt das Haus");
-    retcode = push_msg(bufpush, 0);  // use priority 1 HIGH
-    DEBUGPRINT1("\t\tTASK state_machine push_msg() returns: ");
-    DEBUGPRINTLN1(retcode);
-    xSemaphoreTake(SemaMovement, portMAX_DELAY);
-    movCount_counter_1 = 0;
-    movCount_counter_2 = 0;
-    xSemaphoreGive(SemaMovement);
-
-    vTaskDelay(400 / portTICK_PERIOD_MS);
+    if (config.LeaveReporting == 1) {
+      sprintf(bufpush, "Bewohner verlässt das Haus");
+      retcode = push_msg(bufpush, 0);  // use priority 1 HIGH
+      DEBUGPRINT1("\t\tTASK state_machine push_msg() returns: ");
+      DEBUGPRINTLN1(retcode);
+      xSemaphoreTake(SemaMovement, portMAX_DELAY);  // we take that out,
+      movCount_counter_1 = 0;                       //
+      xSemaphoreGive(SemaMovement);
+      vTaskDelay(400 / portTICK_PERIOD_MS);
+    }
   }
 
   DEBUGPRINTLN3("in state LEAVING.....");
@@ -323,8 +336,8 @@ void eveningReporting() {
       movCount_counter_2_temp = movCount_counter_2;
       xSemaphoreGive(SemaMovement);
 
-      sprintf(bufpush, "Gute Nacht, Anzahl Bewegungen seit Gestern: %d   ", movCount_counter_2_temp);
-
+      sprintf(bufpush, "Gute Nacht, Bewegungen total: %d     , counters: %d/%d, %d/%d   ", movCount_counter_2_temp,number_thingspeak_ok,
+            number_thingspeak_notok, number_pushover_ok, number_pushover_notok);
       // push evening message ------------
       retcode = push_msg(bufpush, 0);  // prio zero
       DEBUGPRINT1("\t\tTASK state_machine push_msg() returns: ");

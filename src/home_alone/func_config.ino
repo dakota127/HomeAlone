@@ -135,6 +135,7 @@ config.ScreenTimeOutSeconds = doc["ScreenTimeOutSeconds"]; // 30
 config.EveningReportingHour = doc["EveningReportingHour"]; // 30
 config.HoursbetweenNoMovementRep =   doc["HoursbetweenNoMovementRep"]; // 30
 config.EssentialDebug =   doc["EssentialDebug"]; // 0 oder 1
+config.LeaveReporting =   doc["LeaveReporting"]; // 0 oder 1
   // Close the file (Curiously, File's destructor doesn't close the file)
   file.close();
 
@@ -211,6 +212,7 @@ void printConfig() {
   Serial.println (config.HoursbetweenNoMovementRep);
   Serial.println (config.EveningReportingHour);
   Serial.println (config.EssentialDebug);
+  Serial.println (config.LeaveReporting);
   Serial.println ("--------------------");
   
   Serial.println ("credentials:");

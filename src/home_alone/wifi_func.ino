@@ -172,8 +172,8 @@ int wifi_func() {
 
       delay(100);  // für ESP32 wird dies zu vTaskDelay(100 / portTICK_PERIOD_MS);
 
-    
-                                  //----------------------------Connect to WLAN ---------------------------
+
+      //----------------------------Connect to WLAN ---------------------------
 
       WiFi.mode(WIFI_STA);  // Wifi mode is station
       WiFi.begin(credentials[0], credentials[1]);
@@ -183,7 +183,7 @@ int wifi_func() {
       if (ret_bool) {
         Serial.println("Connected to WiFi");
         value2_oled = 1;
-        
+
         delay(200);  // für ESP32 wird dies zu vTaskDelay(200 / portTICK_PERIOD_MS);
                      // dies machen wir erst jetzt...
         WiFi.onEvent(WiFiStationDisconnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
@@ -222,26 +222,27 @@ int wifi_func() {
         value2_oled = 7;
       } else {  // wifi ok
         value2_oled = 1;
-        ret_int = report_Thingspeak (wifi_order_struct.mvcount);  // report to thingspeak
+        ret_int = report_Thingspeak(wifi_order_struct.mvcount);  // report to thingspeak
         DEBUGPRINT1("report_Thingspeak: ");
         DEBUGPRINTLN1(ret_int);  // 0 = ok, 9 = error
         if (ret_int > 0) {
           value2_oled = 5;
+          number_thingspeak_notok += 1;  // increase counter notok
           getTimeStamp();
           getCurrTime(false);
           logMessage = String(currTime_string) + ",err thingsspeak\r\n";
           log_SDCard(logMessage, path);
-        }
+        } else number_thingspeak_ok += 1;  // increase counter ok
         // if not true: was error
       }
       break;
 
     //------------------
     case PUSHOVER:
-      
+
       if (essential_debug) {
-        Serial.print ("\t\t\t\t\twifi_func: push message: ");
-        Serial.println (wifi_order_struct.pushtext);
+        Serial.print("\t\t\t\t\twifi_func: push message: ");
+        Serial.println(wifi_order_struct.pushtext);
       }
       if (WiFi.status() != WL_CONNECTED) {
         Serial.println("\t\t\t\t\terror-error-error - no wifi 3");
@@ -257,14 +258,15 @@ int wifi_func() {
         ret_int = report_toPushover(wifi_order_struct.pushtext, wifi_order_struct.priority);  // returns true if ok
         // ok returncode is true
         if (essential_debug) {
-        Serial.print ("\t\t\t\t\treport_to_push returns:: ");
-        Serial.println(ret_bool);
+          Serial.print("\t\t\t\t\treport_to_push returns:: ");
+          Serial.println(ret_bool);
         }
 
         if (ret_int > 0) {
-          value3_oled = 8;  // if not true: was error
+          value3_oled = 8;             // if not true: was error
+          number_pushover_notok += 1;  // increase notok counter
           ret_int = 1;
-        }
+        } else number_pushover_ok += 1;  // increase ok counter
       }
       break;
 
@@ -324,17 +326,17 @@ int report_toPushover(String messageText, int prio) {
   // Create a JSON object with notification details
   // Check the API parameters: https://pushover.net/api
   StaticJsonDocument<512> notification;
-  notification["token"] = apiToken;              //required
-  notification["user"] = userToken;              //required
-  notification["message"] = messageText;         //required
-  notification["title"] = "ESP32 Notification";  //optional
-  notification["device"] = "petersiphone";       //optional
-  notification["url"] = "";                      //optional
-  notification["url_title"] = "";                //optional
-  notification["html"] = "";                     //optional
-  notification["priority"] = "";                 //optional
-  notification["sound"] = "bike";                //optional
-  notification["timestamp"] = "";                //optional
+  notification["token"] = config.PushoverToken;   //required
+  notification["user"] = config.PushoverUserkey;  //required
+  notification["message"] = messageText;          //required
+  notification["title"] = "Home Alone";           //optional
+  notification["device"] = "petersiphone";        //optional
+  notification["url"] = "";                       //optional
+  notification["url_title"] = "";                 //optional
+  notification["html"] = "";                      //optional
+  notification["priority"] = "";                  //optional
+  notification["sound"] = "bike";                 //optional
+  notification["timestamp"] = "";                 //optional
 
   // Serialize the JSON object to a string
   String jsonStringNotification;
@@ -371,7 +373,7 @@ int report_toPushover(String messageText, int prio) {
     https.end();
   }
 
-   
+
   if (httpResponseCode == 200) {
     if (essential_debug) Serial.println("Pushover was OK");
     return (0);

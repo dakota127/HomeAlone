@@ -42,7 +42,7 @@
 #define PUSHOVER_INTERVALL_TEST 900  // in seconds for test debug
 #define HOURSBETWEENNOMOV 1          // 1 hour
 
-
+char bufpush[80];  // buffer for puhover meldung 
 
 enum display_show {
   NOSHOW,  // 
